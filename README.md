@@ -7,7 +7,9 @@ The goal of this project is to practice and demonstrate production-style backend
 clean layered architecture, secure authentication, automated tests, background jobs, performance work,
 and a full CI/CD pipeline.
 
-> **Status:** Phase 0 (foundation). Progress is tracked in the [Roadmap](#roadmap).
+> **Status:** Phase 2 in progress — projects & tasks CRUD on PostgreSQL (Alembic, Docker Compose).  
+> Next: tests, services/repositories, pagination — then Phase 3 (auth).  
+> Progress is tracked in the [Roadmap](#roadmap).
 
 ---
 
@@ -29,24 +31,21 @@ and a full CI/CD pipeline.
 
 ## Features
 
-**Core**
+**Implemented now (Phase 2)**
+- Projects CRUD
+- Tasks CRUD nested under projects (`POST/GET /projects/{id}/tasks`)
+- Task status (`todo` / `in_progress` / `done`) and priority
+- `duration_days` + computed `delivery_date`
+- Cascade delete: deleting a project removes its tasks
+- Health check, OpenAPI docs at `/docs`
+
+**Planned (later phases)**
 - User registration and login (JWT access + refresh tokens)
-- Teams with members and roles
-- Projects belonging to a team
-- Tasks with status, priority, assignee, due date and labels
-- Comments on tasks
+- Teams with members and roles; projects belonging to a team
+- Assignees, comments, labels
 - Filtering, sorting and pagination on list endpoints
-
-**Advanced**
-- Background jobs: notification on task assignment, due-date reminders
-- Redis caching for heavy read endpoints
-- Rate limiting
-- Activity log (who changed what, and when)
-
-**Optional**
-- OAuth login (Google / GitHub)
-- GraphQL endpoint for read queries
-- WebSockets for live board updates
+- Background jobs, Redis cache, rate limiting, activity log
+- Optional: OAuth, GraphQL, WebSockets
 
 ---
 
@@ -73,7 +72,7 @@ and a full CI/CD pipeline.
 
 ## Architecture
 
-The code is split into layers so that each one has a single job:
+Target layers (services/repositories come next in Phase 2):
 
 - **Routers**: HTTP only. Parse the request, call a service, return a response.
 - **Services**: business logic and permission rules. No HTTP and no SQL.
@@ -81,33 +80,8 @@ The code is split into layers so that each one has a single job:
 - **Models**: SQLAlchemy tables.
 - **Schemas**: Pydantic models for request and response bodies.
 
-Target layout (it grows phase by phase, not all at once):
-
-```
-mini-jira/
-├── app/
-│   ├── main.py
-│   ├── core/            # config, security, dependencies
-│   ├── db/              # session, base
-│   ├── models/
-│   ├── schemas/
-│   ├── repositories/
-│   ├── services/
-│   ├── routers/
-│   └── workers/         # Celery tasks
-├── tests/
-│   ├── unit/
-│   └── integration/
-├── alembic/
-├── docker-compose.yml
-├── Dockerfile
-├── .github/workflows/
-├── .env.example
-├── DECISIONS.md
-└── README.md
-```
-
-Request flow:
+**Current flow (temporary):** `Client -> Router -> SQLAlchemy Session -> PostgreSQL`  
+Target flow:
 
 ```
 Client -> Router -> Service -> Repository -> PostgreSQL
@@ -115,16 +89,42 @@ Client -> Router -> Service -> Repository -> PostgreSQL
                        +-> Celery task (via Redis) for slow work
 ```
 
+Layout:
+
+```
+mini-jira/
+├── backend/
+│   ├── app/
+│   │   ├── main.py
+│   │   ├── api/v1.py        # /api/v1 router mount
+│   │   ├── core/            # config (pydantic-settings)
+│   │   ├── db/              # session, base
+│   │   ├── models/
+│   │   ├── schemas/
+│   │   ├── routers/
+│   │   ├── repositories/    # Phase 2 (planned)
+│   │   ├── services/        # Phase 2 (planned)
+│   │   └── workers/         # Celery (Phase 7)
+│   ├── alembic/
+│   ├── Dockerfile
+│   ├── requirements.txt
+│   └── .env.example
+├── docker-compose.yml       # api + Postgres
+├── .env.example             # Compose vars (optional)
+├── DECISIONS.md
+└── README.md
+```
+
 ---
 
 ## Data model
 
-Initial draft. Each table is added in the phase that needs it.
+Each table is added in the phase that needs it.
 
 | Table | Main fields | Phase |
 |---|---|---|
-| projects | id, name, description, created_at | 1-2 |
-| tasks | id, project_id, title, description, status, priority, due_date, created_at, updated_at | 1-2 |
+| projects | id, name, description, created_at, updated_at | 1-2 |
+| tasks | id, project_id, title, description, status, priority, duration_days, delivery_date, created_at, updated_at | 1-2 |
 | users | id, email (unique), hashed_password, full_name, is_active, created_at | 3 |
 | teams | id, name, owner_id, created_at | 4 |
 | team_members | team_id, user_id, role (owner / admin / member) | 4 |
@@ -134,7 +134,11 @@ Initial draft. Each table is added in the phase that needs it.
 
 Columns added later by migration: `tasks.assignee_id`, `tasks.reporter_id` (Phase 3), `projects.team_id` (Phase 4).
 
-`tasks.status` is an enum: `todo`, `in_progress`, `done`.
+- `tasks.status`: `todo` | `in_progress` | `done`
+- `tasks.priority`: `low` | `medium` | `high`
+- `delivery_date` = `created_at.date() + duration_days` (when `duration_days` is set)
+- Deleting a project **cascades** to its tasks (ORM + DB `ON DELETE CASCADE`)
+- Timestamps use timezone-aware UTC (`timestamptz`)
 
 Open questions to settle and record in `DECISIONS.md`:
 - One assignee per task, or many?
@@ -154,25 +158,26 @@ Open questions to settle and record in `DECISIONS.md`:
 | Invite or remove members | no | yes | yes |
 | Delete the team | no | no | yes |
 
-Invariant: a user can only access data of teams they belong to.
+Invariant: a user can only access data of teams they belong to.  
+*(Enforced in Phase 4 — endpoints are open for now.)*
 
 ---
 
 ## API overview
 
-All routes live under `/api/v1`.
+All app routes live under `/api/v1` (except health).
 
-| Group | Endpoints |
-|---|---|
-| Health | `GET /health` |
-| Projects | `POST /projects`, `GET /projects`, `GET /projects/{id}`, `PATCH /projects/{id}`, `DELETE /projects/{id}` |
-| Tasks | `POST /projects/{id}/tasks`, `GET /projects/{id}/tasks`, `GET /tasks/{id}`, `PATCH /tasks/{id}`, `DELETE /tasks/{id}` |
-| Auth | `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`, `GET /users/me` |
-| Teams | `POST /teams`, `GET /teams`, `GET /teams/{id}`, `POST /teams/{id}/members`, `DELETE /teams/{id}/members/{user_id}` |
-| Comments | `POST /tasks/{id}/comments`, `GET /tasks/{id}/comments` |
-| Labels | `POST /projects/{id}/labels`, `GET /projects/{id}/labels` |
+| Group | Endpoints | Status |
+|---|---|---|
+| Health | `GET /health` | Done |
+| Projects | `POST /projects`, `GET /projects`, `GET /projects/{id}`, `PATCH /projects/{id}`, `DELETE /projects/{id}` | Done |
+| Tasks | `POST /projects/{id}/tasks`, `GET /projects/{id}/tasks`, `GET /tasks/{id}`, `PATCH /tasks/{id}`, `DELETE /tasks/{id}` | Done |
+| Auth | `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`, `GET /users/me` | Phase 3 |
+| Teams | `POST /teams`, `GET /teams`, `GET /teams/{id}`, `POST /teams/{id}/members`, `DELETE /teams/{id}/members/{user_id}` | Phase 4 |
+| Comments | `POST /tasks/{id}/comments`, `GET /tasks/{id}/comments` | Phase 5 |
+| Labels | `POST /projects/{id}/labels`, `GET /projects/{id}/labels` | Phase 5 |
 
-List endpoints support: `?page=1&page_size=20&status=todo&assignee_id=5&sort=-due_date`.
+List query params (planned): `?page=1&page_size=20&status=todo&assignee_id=5&sort=-delivery_date`.
 
 Once teams exist (Phase 4), project creation moves under `POST /teams/{id}/projects`.
 
@@ -190,27 +195,28 @@ Rules for every phase:
 
 ### Phase 0: Foundation and tooling
 *Learn: project setup, Git workflow, configuration.*
-- [ ] Repo, `.gitignore`, virtual environment, `requirements.txt` (or `pyproject.toml`)
+- [x] Repo, `.gitignore`, virtual environment, `requirements.txt`
 - [ ] Ruff configured (lint + format)
-- [ ] Settings loaded from environment variables (`pydantic-settings`), `.env.example`
-- [ ] `GET /health` endpoint
+- [x] Settings loaded from environment variables (`pydantic-settings`), `.env.example`
+- [x] `GET /health` endpoint
 - [ ] pytest configured with the first test (for `/health`)
-- [ ] README scope and tech stack finalized
+- [x] README scope and tech stack finalized
 
-### Phase 1: FastAPI fundamentals (in-memory storage)
-*Learn: routing, path/query parameters, Pydantic validation, status codes, error handling, dependency injection basics.*
-- [ ] Projects CRUD with Pydantic schemas (list in memory)
-- [ ] Tasks CRUD under projects, status as enum
-- [ ] Consistent error responses (404, 422, custom exceptions)
-- [ ] Routers separated from schemas, versioned under `/api/v1`
+### Phase 1: FastAPI fundamentals
+*Learn: routing, path/query parameters, Pydantic validation, status codes, error handling, dependency injection basics.*  
+*(We moved persistence earlier and skipped a long-lived in-memory store.)*
+- [x] Projects CRUD with Pydantic schemas
+- [x] Tasks CRUD under projects, status as enum
+- [x] Consistent error responses (404, 422)
+- [x] Routers separated from schemas, versioned under `/api/v1`
 - [ ] Tests for every endpoint (success and failure cases)
 
 ### Phase 2: Persistence
 *Learn: relational modeling, ORM, migrations, the repository pattern, containers for local services.*
-- [ ] Final data model (ERD) for projects and tasks on paper
-- [ ] Docker Compose with PostgreSQL
-- [ ] SQLAlchemy 2.0 models and the first Alembic migration
-- [ ] Repository layer replaces the in-memory store; services layer introduced
+- [x] Data model for projects and tasks
+- [x] Docker Compose with PostgreSQL (+ API image)
+- [x] SQLAlchemy 2.0 models and Alembic migrations
+- [ ] Repository layer + services layer (logic still in routers)
 - [ ] Pagination, filtering and sorting on list endpoints
 - [ ] Separate test database and fixtures; tests still pass
 
@@ -241,7 +247,7 @@ Rules for every phase:
 
 ### Phase 6: Quality and CI
 *Learn: containerizing an app, automated pipelines, coverage.*
-- [ ] Dockerfile for the API, full Docker Compose (API + DB)
+- [x] Dockerfile for the API, Docker Compose (API + DB)
 - [ ] Coverage report (target 70%+)
 - [ ] GitHub Actions: lint, test, build image on every push and pull request
 - [ ] README "Getting started" works from a clean clone
@@ -290,24 +296,55 @@ Rules for every phase:
 
 ## Getting started
 
-_To be filled in as the project takes shape (target: Phase 6)._ Expected experience:
+**1. Clone and env**
 
-```
+```bash
 git clone <repo-url>
 cd mini-jira
-cp .env.example .env
-docker compose up --build
+cp backend/.env.example backend/.env
 ```
 
-Then open `http://localhost:8000/docs`.
+**2. Start Postgres**
+
+```bash
+docker compose up -d db
+```
+
+**3. Backend venv + deps**
+
+```bash
+cd backend
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+**4. Migrations**
+
+```bash
+alembic upgrade head
+```
+
+**5. Run the API**
+
+```bash
+uvicorn app.main:app --reload
+```
+
+Open:
+- Docs: http://127.0.0.1:8000/docs  
+- Health: http://127.0.0.1:8000/health  
+
+Optional: run API in Docker too with `docker compose up --build` (Compose sets `DATABASE_URL` host to `db`).
 
 ---
 
 ## Testing
 
-_To be filled in during Phase 1 and extended every phase._ Planned commands:
+Not set up yet. Planned:
 
-```
+```bash
+cd backend
 pytest
 pytest --cov=app
 ```
@@ -316,6 +353,5 @@ pytest --cov=app
 
 ## Design decisions
 
-A running log lives in `DECISIONS.md`. For each important choice write three lines:
+A running log lives in [`DECISIONS.md`](DECISIONS.md). For each important choice write three lines:
 what was chosen, what the alternatives were, and why.
-Examples: why a repository layer, why JWT over sessions, why Celery over FastAPI background tasks, why a given index.
