@@ -1,0 +1,44 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: mini-jira-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-mini_jira}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mini_jira}
+      POSTGRES_DB: ${POSTGRES_DB:-mini_jira}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mini_jira} -d ${POSTGRES_DB:-mini_jira}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mini-jira-api
+    ports:
+      - "${API_PORT:-8000}:8000"
+    env_file:
+      - ./backend/.env
+    environment:
+      # Host `db` is the Compose service name (reachable inside the network)
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-mini_jira}:${POSTGRES_PASSWORD:-mini_jira}@db:5432/${POSTGRES_DB:-mini_jira}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      DEBUG: ${DEBUG:-true}
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      # Live reload during development (remove for production-like runs)
+      - ./backend:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
