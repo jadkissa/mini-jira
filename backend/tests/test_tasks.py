@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, UTC
 
 def test_create_task(client):
+    """Creating a task under a project returns 201 and that project id."""
     project = client.post("/api/v1/projects", json={"name": "Demo"})
     project_id = project.json()["id"]
 
@@ -16,11 +17,13 @@ def test_create_task(client):
 
 
 def test_get_missing_task(client):
+    """Fetching an unknown task returns 404."""
     response = client.get("/api/v1/tasks/999")
 
     assert response.status_code == 404
 
 def test_list_tasks_only_for_that_project(client):
+    """Listing tasks returns only the tasks that belong to that project."""
     first = client.post("/api/v1/projects", json={"name": "First"}).json()
     second = client.post("/api/v1/projects", json={"name": "Second"}).json()
 
@@ -36,6 +39,7 @@ def test_list_tasks_only_for_that_project(client):
 
 
 def test_create_task_sets_delivery_date(client):
+    """Creating a task with duration_days sets delivery_date that many days ahead."""
     project_id = client.post("/api/v1/projects", json={"name": "Demo"}).json()["id"]
 
     response = client.post(

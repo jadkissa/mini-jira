@@ -11,5 +11,6 @@ app.include_router(api_router)
 
 @app.get("/health")
 def health_check():
+    """Report that the API is running and which environment it is in."""
     return {"status": "ok", "environment": settings.environment}
 

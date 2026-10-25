@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -11,6 +11,7 @@ router = APIRouter(tags=["tasks"])
 
 
 def _service(db: Session) -> TaskService:
+    """Build a task service bound to this request's database session."""
     return TaskService(TaskRepository(db), ProjectRepository(db))
 
 
@@ -24,16 +25,21 @@ def create_task(
     payload: TaskCreate,
     db: Session = Depends(get_db),
 ):
+    """Create a task under a project and return it."""
     return _service(db).create(payload, project_id)
 
 
 @router.get("/projects/{project_id}/tasks", response_model=list[TaskRead])
-def list_tasks(project_id: int, db: Session = Depends(get_db)):
-    return _service(db).list(project_id)
+def list_tasks(project_id: int, db: Session = Depends(get_db),
+                page: int = Query(1, ge=1),
+                page_size: int = Query(20, ge=1, le=100)):
+    """Return one page of tasks for a project."""
+    return _service(db).list(project_id, page, page_size)
 
 
 @router.get("/tasks/{task_id}", response_model=TaskRead)
 def get_task(task_id: int, db: Session = Depends(get_db)):
+    """Return one task, or 404 if it does not exist."""
     return _service(db).get(task_id)
 
 
@@ -43,9 +49,11 @@ def update_task(
     payload: TaskUpdate,
     db: Session = Depends(get_db),
 ):
+    """Update the fields sent in the body and return the task."""
     return _service(db).update(task_id, payload)
 
 
 @router.delete("/tasks/{task_id}", status_code=204)
 def delete_task(task_id: int, db: Session = Depends(get_db)):
+    """Delete a task, or 404 if it does not exist."""
     _service(db).delete(task_id)

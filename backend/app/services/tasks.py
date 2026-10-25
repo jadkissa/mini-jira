@@ -9,6 +9,7 @@ from app.schemas.task import TaskCreate, TaskUpdate
 
 
 def _delivery_date_for(duration_days: int | None, created_at: datetime) -> date | None:
+    """Return created_at plus duration_days, or None when duration is missing."""
     if duration_days is None:
         return None
     if created_at.tzinfo is None:
@@ -17,17 +18,22 @@ def _delivery_date_for(duration_days: int | None, created_at: datetime) -> date 
 
 
 class TaskService:
+    """Task rules: project must exist, and delivery_date follows duration_days."""
+
     def __init__(self, repo: TaskRepository, project_repo: ProjectRepository):
+        """Store the task and project repositories for this request."""
         self.repo = repo
         self.project_repo = project_repo
 
     def _get_project_or_404(self, project_id: int):
+        """Return the project, or 404 if it does not exist."""
         project = self.project_repo.get_by_id(project_id)
         if not project:
             raise HTTPException(status_code=404, detail="Project not found")
         return project
 
     def create(self, payload: TaskCreate, project_id: int) -> Task:
+        """Create a task on an existing project and set its delivery date."""
         self._get_project_or_404(project_id)
         now = datetime.now(UTC)
         task = Task(
@@ -37,17 +43,20 @@ class TaskService:
         )
         return self.repo.create(task)
 
-    def list(self, project_id: int) -> list[Task]:
+    def list(self, project_id: int, page: int, page_size: int) -> list[Task]:
+        """Return one page of tasks for an existing project."""
         self._get_project_or_404(project_id)
-        return self.repo.list_by_project(project_id)
+        return self.repo.list_by_project(project_id, page, page_size)
 
     def get(self, task_id: int) -> Task:
+        """Return a task, or 404 if it does not exist."""
         task = self.repo.get_by_id(task_id)
         if not task:
             raise HTTPException(status_code=404, detail="Task not found")
         return task
 
     def update(self, task_id: int, payload: TaskUpdate) -> Task:
+        """Apply the sent fields and recompute delivery_date when duration changes."""
         task = self.repo.get_by_id(task_id)
         if not task:
             raise HTTPException(status_code=404, detail="Task not found")
@@ -60,6 +69,7 @@ class TaskService:
         return self.repo.update(task)
 
     def delete(self, task_id: int) -> None:
+        """Delete a task, or 404 if it does not exist."""
         task = self.repo.get_by_id(task_id)
         if not task:
             raise HTTPException(status_code=404, detail="Task not found")

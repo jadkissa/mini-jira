@@ -13,9 +13,11 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 
 @pytest.fixture
 def client():
+    """Give each test a clean database and an HTTP client pointed at the app."""
     Base.metadata.create_all(bind=engine)
 
     def override_get_db():
+        """Use the test database instead of the app's normal session."""
         db = TestingSessionLocal()
         try:
             yield db

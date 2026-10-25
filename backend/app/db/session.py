@@ -9,6 +9,7 @@ engine = create_engine(settings.database_url)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def get_db() -> Generator[Session, None, None]:
+    """Open a database session for one request and close it afterward."""
     db = SessionLocal()
     try:
         yield db

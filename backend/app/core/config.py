@@ -26,4 +26,5 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
+    """Load settings from the environment once and reuse them."""
     return Settings()
