@@ -14,3 +14,9 @@ def test_get_missing_project(client):
     response = client.get("/api/v1/projects/999")
 
     assert response.status_code == 404
+
+def test_delete_missing_project(client):
+    response = client.delete("/api/v1/projects/999")
+    assert response.status_code == 404
+
+
