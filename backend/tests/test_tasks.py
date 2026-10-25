@@ -50,3 +50,50 @@ def test_create_task_sets_delivery_date(client):
     assert response.status_code == 201
     expected = (datetime.now(UTC).date() + timedelta(days=5)).isoformat()
     assert response.json()["delivery_date"] == expected
+
+
+def test_list_tasks_filters_by_status(client):
+    """Listing tasks with status returns only tasks in that status."""
+    project_id = client.post("/api/v1/projects", json={"name": "Demo"}).json()["id"]
+    client.post(
+        f"/api/v1/projects/{project_id}/tasks",
+        json={"title": "A", "status": "todo"},
+    )
+    client.post(
+        f"/api/v1/projects/{project_id}/tasks",
+        json={"title": "B", "status": "done"},
+    )
+
+    response = client.get(f"/api/v1/projects/{project_id}/tasks?status=todo")
+
+    assert response.status_code == 200
+    titles = [task["title"] for task in response.json()]
+    assert titles == ["A"]
+
+
+def test_list_tasks_sorts_by_delivery_date(client):
+    """sort=delivery_date returns the earlier delivery date first."""
+    project_id = client.post("/api/v1/projects", json={"name": "Demo"}).json()["id"]
+    client.post(
+        f"/api/v1/projects/{project_id}/tasks",
+        json={"title": "Later", "duration_days": 10},
+    )
+    client.post(
+        f"/api/v1/projects/{project_id}/tasks",
+        json={"title": "Sooner", "duration_days": 1},
+    )
+
+    response = client.get(f"/api/v1/projects/{project_id}/tasks?sort=delivery_date")
+
+    assert response.status_code == 200
+    titles = [task["title"] for task in response.json()]
+    assert titles == ["Sooner", "Later"]
+
+
+def test_list_tasks_rejects_unknown_sort(client):
+    """An unknown sort field returns 422."""
+    project_id = client.post("/api/v1/projects", json={"name": "Demo"}).json()["id"]
+
+    response = client.get(f"/api/v1/projects/{project_id}/tasks?sort=nope")
+
+    assert response.status_code == 422

@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.repositories.projects import ProjectRepository
 from app.repositories.tasks import TaskRepository
-from app.schemas.task import TaskCreate, TaskRead, TaskUpdate
+from app.schemas.task import TaskCreate, TaskRead, TaskStatus, TaskUpdate
 from app.services.tasks import TaskService
 
 router = APIRouter(tags=["tasks"])
@@ -32,9 +32,11 @@ def create_task(
 @router.get("/projects/{project_id}/tasks", response_model=list[TaskRead])
 def list_tasks(project_id: int, db: Session = Depends(get_db),
                 page: int = Query(1, ge=1),
-                page_size: int = Query(20, ge=1, le=100)):
-    """Return one page of tasks for a project."""
-    return _service(db).list(project_id, page, page_size)
+                page_size: int = Query(20, ge=1, le=100),
+                status: TaskStatus | None = None,
+                sort: str | None = None):
+    """Return one page of tasks for a project, optionally filtered and sorted."""
+    return _service(db).list(project_id, page, page_size, status, sort)
 
 
 @router.get("/tasks/{task_id}", response_model=TaskRead)

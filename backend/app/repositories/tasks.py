@@ -12,16 +12,23 @@ class TaskRepository:
         """Return the task with this id, or None."""
         return self.db.query(Task).filter(Task.id == task_id).first()
 
-    def list_by_project(self, project_id: int, page: int, page_size: int) -> list[Task]:
-        """Return one page of tasks for a project, ordered by id."""
+    def list_by_project(
+        self,
+        project_id: int,
+        page: int,
+        page_size: int,
+        status: str | None = None,
+        sort_field: str = "id",
+        descending: bool = False,
+    ) -> list[Task]:
+        """Return one page of a project's tasks, optionally filtered and sorted."""
         offset = (page - 1) * page_size
-        return (
-            self.db.query(Task).filter(Task.project_id == project_id)
-            .order_by(Task.id)
-            .offset(offset)
-            .limit(page_size)
-            .all()
-        )
+        query = self.db.query(Task).filter(Task.project_id == project_id)
+        if status is not None:
+            query = query.filter(Task.status == status)
+        column = getattr(Task, sort_field)
+        order = column.desc() if descending else column.asc()
+        return query.order_by(order).offset(offset).limit(page_size).all()
 
     def create(self, task: Task) -> Task:
         """Insert a task and return it with its database id."""

@@ -5,7 +5,21 @@ from fastapi import HTTPException
 from app.models.task import Task
 from app.repositories.projects import ProjectRepository
 from app.repositories.tasks import TaskRepository
-from app.schemas.task import TaskCreate, TaskUpdate
+from app.schemas.task import TaskCreate, TaskStatus, TaskUpdate
+
+
+_SORT_FIELDS = {"id", "delivery_date", "priority", "status", "created_at"}
+
+
+def _parse_sort(sort: str | None) -> tuple[str, bool]:
+    """Return the column name and whether the order is descending."""
+    if sort is None:
+        return "id", False
+    descending = sort.startswith("-")
+    field = sort[1:] if descending else sort
+    if field not in _SORT_FIELDS:
+        raise HTTPException(status_code=422, detail="Invalid sort field")
+    return field, descending
 
 
 def _delivery_date_for(duration_days: int | None, created_at: datetime) -> date | None:
@@ -43,10 +57,20 @@ class TaskService:
         )
         return self.repo.create(task)
 
-    def list(self, project_id: int, page: int, page_size: int) -> list[Task]:
-        """Return one page of tasks for an existing project."""
+    def list(
+        self,
+        project_id: int,
+        page: int,
+        page_size: int,
+        status: TaskStatus | None = None,
+        sort: str | None = None,
+    ) -> list[Task]:
+        """Return one page of a project's tasks, optionally filtered and sorted."""
         self._get_project_or_404(project_id)
-        return self.repo.list_by_project(project_id, page, page_size)
+        sort_field, descending = _parse_sort(sort)
+        return self.repo.list_by_project(
+            project_id, page, page_size, status, sort_field, descending
+        )
 
     def get(self, task_id: int) -> Task:
         """Return a task, or 404 if it does not exist."""
