@@ -7,8 +7,8 @@ The goal of this project is to practice and demonstrate production-style backend
 clean layered architecture, secure authentication, automated tests, background jobs, performance work,
 and a full CI/CD pipeline.
 
-> **Status:** Phase 2 in progress — projects & tasks CRUD on PostgreSQL (Alembic, Docker Compose).  
-> Next: tests, services/repositories, pagination — then Phase 3 (auth).  
+> **Status:** Phase 3 in progress — users can register; passwords are hashed with argon2.  
+> Next: login, JWT, and protecting the existing endpoints.  
 > Progress is tracked in the [Roadmap](#roadmap).
 
 ---
@@ -31,19 +31,21 @@ and a full CI/CD pipeline.
 
 ## Features
 
-**Implemented now (Phase 2)**
+**Implemented now**
 - Projects CRUD
 - Tasks CRUD nested under projects (`POST/GET /projects/{id}/tasks`)
 - Task status (`todo` / `in_progress` / `done`) and priority
 - `duration_days` + computed `delivery_date`
 - Cascade delete: deleting a project removes its tasks
+- Routers, services, and repositories for projects, tasks, and users
+- Pagination on list endpoints. Task lists also filter by `status` and accept `sort`
+- User registration and user get/update/delete. Passwords are stored as an argon2 hash
 - Health check, OpenAPI docs at `/docs`
 
 **Planned (later phases)**
-- User registration and login (JWT access + refresh tokens)
+- Login, JWT access and refresh tokens, and protecting endpoints
 - Teams with members and roles; projects belonging to a team
 - Assignees, comments, labels
-- Filtering, sorting and pagination on list endpoints
 - Background jobs, Redis cache, rate limiting, activity log
 - Optional: OAuth, GraphQL, WebSockets
 
@@ -72,7 +74,7 @@ and a full CI/CD pipeline.
 
 ## Architecture
 
-Target layers (services/repositories come next in Phase 2):
+Layers:
 
 - **Routers**: HTTP only. Parse the request, call a service, return a response.
 - **Services**: business logic and permission rules. No HTTP and no SQL.
@@ -80,14 +82,13 @@ Target layers (services/repositories come next in Phase 2):
 - **Models**: SQLAlchemy tables.
 - **Schemas**: Pydantic models for request and response bodies.
 
-**Current flow (temporary):** `Client -> Router -> SQLAlchemy Session -> PostgreSQL`  
-Target flow:
+Current flow:
 
 ```
 Client -> Router -> Service -> Repository -> PostgreSQL
-                       |
-                       +-> Celery task (via Redis) for slow work
 ```
+
+Celery (via Redis) is added beside the service in Phase 7 for slow work.
 
 Layout:
 
@@ -97,13 +98,13 @@ mini-jira/
 │   ├── app/
 │   │   ├── main.py
 │   │   ├── api/v1.py        # /api/v1 router mount
-│   │   ├── core/            # config (pydantic-settings)
+│   │   ├── core/            # config, password hashing
 │   │   ├── db/              # session, base
 │   │   ├── models/
 │   │   ├── schemas/
 │   │   ├── routers/
-│   │   ├── repositories/    # Phase 2 (planned)
-│   │   ├── services/        # Phase 2 (planned)
+│   │   ├── repositories/
+│   │   ├── services/
 │   │   └── workers/         # Celery (Phase 7)
 │   ├── alembic/
 │   ├── Dockerfile
@@ -172,12 +173,13 @@ All app routes live under `/api/v1` (except health).
 | Health | `GET /health` | Done |
 | Projects | `POST /projects`, `GET /projects`, `GET /projects/{id}`, `PATCH /projects/{id}`, `DELETE /projects/{id}` | Done |
 | Tasks | `POST /projects/{id}/tasks`, `GET /projects/{id}/tasks`, `GET /tasks/{id}`, `PATCH /tasks/{id}`, `DELETE /tasks/{id}` | Done |
-| Auth | `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`, `GET /users/me` | Phase 3 |
+| Users | `POST /users`, `GET /users/{id}`, `PATCH /users/{id}`, `DELETE /users/{id}` | Done |
+| Auth | `POST /auth/login`, `POST /auth/refresh`, `GET /users/me` | Phase 3 |
 | Teams | `POST /teams`, `GET /teams`, `GET /teams/{id}`, `POST /teams/{id}/members`, `DELETE /teams/{id}/members/{user_id}` | Phase 4 |
 | Comments | `POST /tasks/{id}/comments`, `GET /tasks/{id}/comments` | Phase 5 |
 | Labels | `POST /projects/{id}/labels`, `GET /projects/{id}/labels` | Phase 5 |
 
-List query params (planned): `?page=1&page_size=20&status=todo&assignee_id=5&sort=-delivery_date`.
+List query params: `?page=1&page_size=20` on project and task lists. Task lists also accept `status=todo` and `sort=delivery_date` (prefix `-` for descending). `assignee_id` comes with auth.
 
 Once teams exist (Phase 4), project creation moves under `POST /teams/{id}/projects`.
 
@@ -199,7 +201,7 @@ Rules for every phase:
 - [ ] Ruff configured (lint + format)
 - [x] Settings loaded from environment variables (`pydantic-settings`), `.env.example`
 - [x] `GET /health` endpoint
-- [ ] pytest configured with the first test (for `/health`)
+- [x] pytest configured with the first test (for `/health`)
 - [x] README scope and tech stack finalized
 
 ### Phase 1: FastAPI fundamentals
@@ -216,14 +218,15 @@ Rules for every phase:
 - [x] Data model for projects and tasks
 - [x] Docker Compose with PostgreSQL (+ API image)
 - [x] SQLAlchemy 2.0 models and Alembic migrations
-- [ ] Repository layer + services layer (logic still in routers)
-- [ ] Pagination, filtering and sorting on list endpoints
-- [ ] Separate test database and fixtures; tests still pass
+- [x] Repository layer + services layer
+- [x] Pagination, filtering and sorting on list endpoints
+- [x] Separate test database and fixtures; tests still pass
 
 ### Phase 3: Authentication
 *Learn: password hashing, JWT, securing endpoints, dependencies.*
-- [ ] Users table and migration
-- [ ] Register and login with hashed passwords (argon2)
+- [x] Users table and migration
+- [x] Register with hashed passwords (argon2)
+- [ ] Login with hashed passwords
 - [ ] JWT access and refresh tokens
 - [ ] `get_current_user` dependency protecting all endpoints
 - [ ] `reporter_id` set from the authenticated user; `assignee_id` added
@@ -341,13 +344,14 @@ Optional: run API in Docker too with `docker compose up --build` (Compose sets `
 
 ## Testing
 
-Not set up yet. Planned:
+From `backend/`, with Postgres running and a database named `mini_jira_test`:
 
 ```bash
-cd backend
+docker exec -it mini-jira-db psql -U mini_jira -c "CREATE DATABASE mini_jira_test;"
 pytest
-pytest --cov=app
 ```
+
+Create `mini_jira_test` once. Each test builds and drops its own tables there. Coverage (`pytest --cov=app`) is planned for Phase 6.
 
 ---
 
