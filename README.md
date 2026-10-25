@@ -7,8 +7,8 @@ The goal of this project is to practice and demonstrate production-style backend
 clean layered architecture, secure authentication, automated tests, background jobs, performance work,
 and a full CI/CD pipeline.
 
-> **Status:** Phase 4 done — teams, roles, and team-level data isolation.  
-> Next: Phase 5, comments and labels.  
+> **Status:** Phase 5 done — comments, labels, and an activity log.  
+> Next: Phase 6, coverage and CI. That part is left for you to build.  
 > Progress is tracked in the [Roadmap](#roadmap).
 
 ---
@@ -44,11 +44,12 @@ and a full CI/CD pipeline.
 - Project, task, and user routes except registration require that access token. `GET /users/me` returns the logged-in user
 - New tasks store `reporter_id` from the logged-in user. `assignee_id` is optional
 - Teams with owner, admin, and member roles. Projects belong to a team. Users only see teams they belong to
+- Comments on tasks, labels on projects, and an activity log for task changes
+- OpenAPI tags at `/docs`. A Postman collection is in `postman/mini-jira.postman_collection.json`
 - Health check, OpenAPI docs at `/docs`
 
 **Planned (later phases)**
-- Comments, labels
-- Background jobs, Redis cache, rate limiting, activity log
+- Background jobs, Redis cache, rate limiting
 - Optional: OAuth, GraphQL, WebSockets
 
 ---
@@ -135,7 +136,7 @@ Each table is added in the phase that needs it.
 | labels, task_labels | label: id, project_id, name, color; join table task_id + label_id | 5 |
 | activity_log | id, task_id, actor_id, action, old_value, new_value, created_at | 5 |
 
-`tasks.reporter_id` is set from the logged-in user. `tasks.assignee_id` is optional. New projects always set `team_id`.
+`tasks.reporter_id` is set from the logged-in user. `tasks.assignee_id` is optional. New projects always set `team_id`. Task create, field changes, comments, and label attach/remove write a row in `activity_log`.
 
 - `tasks.status`: `todo` | `in_progress` | `done`
 - `tasks.priority`: `low` | `medium` | `high`
@@ -156,8 +157,9 @@ Open questions to settle and record in `DECISIONS.md`:
 |---|---|---|---|
 | View team projects and tasks | yes | yes | yes |
 | Create and edit tasks | yes | yes | yes |
+| Comment, and add or remove a label on a task | yes | yes | yes |
 | Delete any task | no | yes | yes |
-| Manage projects | no | yes | yes |
+| Manage projects, including creating and deleting labels | no | yes | yes |
 | Invite or remove members | no | yes | yes |
 | Delete the team | no | no | yes |
 
@@ -178,12 +180,13 @@ All app routes live under `/api/v1` (except health).
 | Auth | `POST /auth/login`, `POST /auth/refresh` | Done |
 | Auth | `GET /users/me` | Done |
 | Teams | `POST /teams`, `GET /teams`, `GET /teams/{id}`, `DELETE /teams/{id}`, `POST /teams/{id}/members`, `DELETE /teams/{id}/members/{user_id}`, `POST /teams/{id}/projects` | Done |
-| Comments | `POST /tasks/{id}/comments`, `GET /tasks/{id}/comments` | Phase 5 |
-| Labels | `POST /projects/{id}/labels`, `GET /projects/{id}/labels` | Phase 5 |
+| Comments | `POST /tasks/{id}/comments`, `GET /tasks/{id}/comments` | Done |
+| Labels | `POST /projects/{id}/labels`, `GET /projects/{id}/labels`, `DELETE /projects/{id}/labels/{label_id}`, `GET /tasks/{id}/labels`, `POST /tasks/{id}/labels`, `DELETE /tasks/{id}/labels/{label_id}` | Done |
+| Activity | `GET /tasks/{id}/activity` | Done |
 
-List query params: `?page=1&page_size=20` on team, project, and task lists. Task lists also accept `status=todo` and `sort=delivery_date` (prefix `-` for descending). `assignee_id` comes with auth. Project creation is `POST /teams/{id}/projects`.
+List query params: `?page=1&page_size=20` on team, project, task, comment, label, and activity lists. Task lists also accept `status=todo` and `sort=delivery_date` (prefix `-` for descending). `assignee_id` comes with auth. Project creation is `POST /teams/{id}/projects`.
 
-Interactive docs: `/docs` (Swagger) and `/redoc`.
+Interactive docs: `/docs` (Swagger) and `/redoc`. Import `postman/mini-jira.postman_collection.json` to call the same routes from Postman. Run **Login** first; it stores the access token.
 
 ---
 
@@ -242,11 +245,11 @@ Rules for every phase:
 
 ### Phase 5: Domain completion
 *Learn: more relations, query design, auditing.*
-- [ ] Comments
-- [ ] Labels and task labels
-- [ ] Activity log
-- [ ] Swagger docs cleaned up, Postman collection exported
-- [ ] Tests for the new endpoints
+- [x] Comments
+- [x] Labels and task labels
+- [x] Activity log
+- [x] Swagger docs cleaned up, Postman collection exported
+- [x] Tests for the new endpoints
 
 ### Phase 6: Quality and CI
 *Learn: containerizing an app, automated pipelines, coverage.*

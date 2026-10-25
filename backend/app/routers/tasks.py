@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.core.deps import get_current_user
 from app.db.session import get_db
 from app.models.user import User
+from app.repositories.activity import ActivityRepository
 from app.repositories.projects import ProjectRepository
 from app.repositories.tasks import TaskRepository
 from app.repositories.teams import TeamRepository
@@ -21,6 +22,7 @@ def _service(db: Session) -> TaskService:
         ProjectRepository(db),
         UserRepository(db),
         TeamRepository(db),
+        ActivityRepository(db),
     )
 
 

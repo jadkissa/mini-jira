@@ -38,3 +38,13 @@ class Task(Base):
         nullable=True,
     )
     project = relationship("Project", back_populates="tasks")
+    comments = relationship(
+        "Comment",
+        back_populates="task",
+        cascade="all, delete-orphan",
+    )
+    activity = relationship(
+        "ActivityLog",
+        back_populates="task",
+        cascade="all, delete-orphan",
+    )

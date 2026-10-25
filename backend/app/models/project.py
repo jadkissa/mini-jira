@@ -31,3 +31,8 @@ class Project(Base):
         back_populates="project",
         cascade="all, delete-orphan",
     )
+    labels = relationship(
+        "Label",
+        back_populates="project",
+        cascade="all, delete-orphan",
+    )

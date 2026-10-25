@@ -14,7 +14,11 @@ class Settings(BaseSettings):
     )
 
     app_name: str = "Mini Jira"
-    app_description: str = "A simple project management tool"
+    app_description: str = (
+        "Task and project API. Send Authorization: Bearer <access_token> "
+        "except on /health, POST /api/v1/users, POST /api/v1/auth/login, "
+        "and POST /api/v1/auth/refresh."
+    )
     environment: str = "development"
     debug: bool = True
     # Used in Phase 2+ (SQLAlchemy). Inside Compose, host is `db`.

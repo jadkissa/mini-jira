@@ -6,6 +6,9 @@ from alembic import context
 
 from app.core.config import get_settings
 from app.db.base import Base
+from app.models.activity import ActivityLog  # noqa: F401
+from app.models.comment import Comment  # noqa: F401
+from app.models.label import Label, TaskLabel  # noqa: F401
 from app.models.project import Project  # noqa: F401
 from app.models.task import Task  # noqa: F401
 from app.models.team import Team, TeamMember  # noqa: F401

@@ -1,6 +1,10 @@
 from fastapi import HTTPException
 
+from app.models.project import Project
+from app.models.task import Task
 from app.models.team import TeamMember
+from app.repositories.projects import ProjectRepository
+from app.repositories.tasks import TaskRepository
 from app.repositories.teams import TeamRepository
 
 OWNER = "owner"
@@ -34,3 +38,42 @@ def require_owner(membership: TeamMember) -> None:
     """Allow only the team owner."""
     if membership.role != OWNER:
         raise HTTPException(status_code=403, detail="Not allowed")
+
+
+def visible_project(
+    project_repo: ProjectRepository,
+    team_repo: TeamRepository,
+    project_id: int,
+    user_id: int,
+    detail: str = "Project not found",
+) -> tuple[Project, TeamMember]:
+    """Return a project the user belongs to, or 404."""
+    project = project_repo.get_by_id(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail=detail)
+    membership = require_membership(team_repo, project.team_id, user_id, detail=detail)
+    return project, membership
+
+
+def visible_task(
+    task_repo: TaskRepository,
+    project_repo: ProjectRepository,
+    team_repo: TeamRepository,
+    task_id: int,
+    user_id: int,
+) -> tuple[Task, TeamMember]:
+    """Return a task the user can see, or 404."""
+    task = task_repo.get_by_id(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    try:
+        _, membership = visible_project(
+            project_repo,
+            team_repo,
+            task.project_id,
+            user_id,
+            detail="Task not found",
+        )
+    except HTTPException:
+        raise HTTPException(status_code=404, detail="Task not found") from None
+    return task, membership
