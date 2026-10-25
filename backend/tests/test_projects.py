@@ -1,9 +1,9 @@
+from tests.helpers import create_project
+
+
 def test_create_project(client):
     """Creating a project returns 201 and the saved name."""
-    response = client.post(
-        "/api/v1/projects",
-        json={"name": "Demo", "description": "First project"},
-    )
+    response = create_project(client, "Demo", "First project")
 
     assert response.status_code == 201
     body = response.json()
@@ -26,7 +26,7 @@ def test_delete_missing_project(client):
 def test_list_projects_is_paginated(client):
     """Listing projects returns only the requested page size."""
     for name in ("A", "B", "C"):
-        client.post("/api/v1/projects", json={"name": name})
+        create_project(client, name)
 
     response = client.get("/api/v1/projects?page=1&page_size=2")
 

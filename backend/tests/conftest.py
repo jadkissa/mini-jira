@@ -25,8 +25,22 @@ def client():
             db.close()
 
     app.dependency_overrides[get_db] = override_get_db
-    with TestClient(app) as client:
-        yield client
-    
+    with TestClient(app) as test_client:
+        test_client.post(
+            "/api/v1/users",
+            json={
+                "email": "tester@example.com",
+                "password": "secret",
+                "full_name": "Tester",
+            },
+        )
+        login = test_client.post(
+            "/api/v1/auth/login",
+            json={"email": "tester@example.com", "password": "secret"},
+        )
+        token = login.json()["access_token"]
+        test_client.headers["Authorization"] = f"Bearer {token}"
+        yield test_client
+
     app.dependency_overrides.clear()
     Base.metadata.drop_all(bind=engine)

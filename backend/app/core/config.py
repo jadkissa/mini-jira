@@ -21,6 +21,10 @@ class Settings(BaseSettings):
     database_url: str = (
         "postgresql+psycopg://mini_jira:mini_jira@localhost:5432/mini_jira"
     )
+    jwt_secret: str = "dev-secret-change-me-use-at-least-32-bytes"
+    jwt_algorithm: str = "HS256"
+    access_token_expire_minutes: int = 15
+    refresh_token_expire_days: int = 7
 
 
 

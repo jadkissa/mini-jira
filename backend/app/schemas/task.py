@@ -24,6 +24,8 @@ class TaskRead(BaseModel):
     updated_at: datetime
     delivery_date: date | None = None
     project_id: int
+    reporter_id: int | None = None
+    assignee_id: int | None = None
     
 class TaskCreate(BaseModel):
     title: str
@@ -31,7 +33,8 @@ class TaskCreate(BaseModel):
     status: TaskStatus = Field(default=TaskStatus.todo) 
     priority: TaskPriority = Field(default=TaskPriority.medium)
     duration_days: int | None = None
-    
+    assignee_id: int | None = None
+
 
 class TaskUpdate(BaseModel):
     title: str | None = None
@@ -39,3 +42,4 @@ class TaskUpdate(BaseModel):
     status: TaskStatus | None = None
     priority: TaskPriority | None = None
     duration_days: int | None = None
+    assignee_id: int | None = None

@@ -12,14 +12,19 @@ class ProjectRepository:
         """Return the project with this id, or None."""
         return self.db.query(Project).filter(Project.id == project_id).first()
 
-    def list_all(self, page: int, page_size: int) -> list[Project]:
-        """Return one page of projects ordered by id."""
+    def list_for_teams(self, team_ids: list[int], page: int, page_size: int) -> list[Project]:
+        """Return one page of projects that belong to these teams."""
+        if not team_ids:
+            return []
         offset = (page - 1) * page_size
-        return (self.db.query(Project)
-        .order_by(Project.id)
-        .offset(offset)
-        .limit(page_size)
-        .all())
+        return (
+            self.db.query(Project)
+            .filter(Project.team_id.in_(team_ids))
+            .order_by(Project.id)
+            .offset(offset)
+            .limit(page_size)
+            .all()
+        )
 
     def create(self, project: Project) -> Project:
         """Insert a project and return it with its database id."""

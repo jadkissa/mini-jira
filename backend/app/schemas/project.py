@@ -8,6 +8,7 @@ class ProjectRead(BaseModel):
     description: str | None = None
     created_at: datetime
     updated_at: datetime
+    team_id: int | None = None
 
 class ProjectCreate(BaseModel):
     name: str

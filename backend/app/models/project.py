@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import Column, DateTime, Integer, String
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
 from app.db.base import Base
@@ -19,6 +19,13 @@ class Project(Base):
         onupdate=lambda: datetime.now(UTC),
     )
 
+    team_id = Column(
+        Integer,
+        ForeignKey("teams.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+    team = relationship("Team", back_populates="projects")
     tasks = relationship(
         "Task",
         back_populates="project",

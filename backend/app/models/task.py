@@ -27,4 +27,14 @@ class Task(Base):
         ForeignKey("projects.id", ondelete="CASCADE"),
         nullable=False,
     )
+    reporter_id = Column(
+        Integer,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    assignee_id = Column(
+        Integer,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     project = relationship("Project", back_populates="tasks")

@@ -13,6 +13,26 @@ class UserRead(BaseModel):
     full_name: str
     created_at: datetime 
 
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class Token(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+
+
+class RefreshRequest(BaseModel):
+    refresh_token: str
+
+
+class AccessToken(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+
 class UserUpdate(BaseModel):
     email: str | None = None
     full_name: str | None = None

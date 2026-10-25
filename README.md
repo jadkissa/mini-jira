@@ -7,8 +7,8 @@ The goal of this project is to practice and demonstrate production-style backend
 clean layered architecture, secure authentication, automated tests, background jobs, performance work,
 and a full CI/CD pipeline.
 
-> **Status:** Phase 3 in progress — users can register; passwords are hashed with argon2.  
-> Next: login, JWT, and protecting the existing endpoints.  
+> **Status:** Phase 4 done — teams, roles, and team-level data isolation.  
+> Next: Phase 5, comments and labels.  
 > Progress is tracked in the [Roadmap](#roadmap).
 
 ---
@@ -37,15 +37,17 @@ and a full CI/CD pipeline.
 - Task status (`todo` / `in_progress` / `done`) and priority
 - `duration_days` + computed `delivery_date`
 - Cascade delete: deleting a project removes its tasks
-- Routers, services, and repositories for projects, tasks, and users
+- Routers, services, and repositories for projects, tasks, users, and teams
 - Pagination on list endpoints. Task lists also filter by `status` and accept `sort`
 - User registration and user get/update/delete. Passwords are stored as an argon2 hash
+- Login returns a JWT access token and a refresh token. `POST /auth/refresh` issues a new access token
+- Project, task, and user routes except registration require that access token. `GET /users/me` returns the logged-in user
+- New tasks store `reporter_id` from the logged-in user. `assignee_id` is optional
+- Teams with owner, admin, and member roles. Projects belong to a team. Users only see teams they belong to
 - Health check, OpenAPI docs at `/docs`
 
 **Planned (later phases)**
-- Login, JWT access and refresh tokens, and protecting endpoints
-- Teams with members and roles; projects belonging to a team
-- Assignees, comments, labels
+- Comments, labels
 - Background jobs, Redis cache, rate limiting, activity log
 - Optional: OAuth, GraphQL, WebSockets
 
@@ -124,8 +126,8 @@ Each table is added in the phase that needs it.
 
 | Table | Main fields | Phase |
 |---|---|---|
-| projects | id, name, description, created_at, updated_at | 1-2 |
-| tasks | id, project_id, title, description, status, priority, duration_days, delivery_date, created_at, updated_at | 1-2 |
+| projects | id, name, description, team_id, created_at, updated_at | 1-4 |
+| tasks | id, project_id, title, description, status, priority, duration_days, delivery_date, reporter_id, assignee_id, created_at, updated_at | 1-3 |
 | users | id, email (unique), hashed_password, full_name, is_active, created_at | 3 |
 | teams | id, name, owner_id, created_at | 4 |
 | team_members | team_id, user_id, role (owner / admin / member) | 4 |
@@ -133,7 +135,7 @@ Each table is added in the phase that needs it.
 | labels, task_labels | label: id, project_id, name, color; join table task_id + label_id | 5 |
 | activity_log | id, task_id, actor_id, action, old_value, new_value, created_at | 5 |
 
-Columns added later by migration: `tasks.assignee_id`, `tasks.reporter_id` (Phase 3), `projects.team_id` (Phase 4).
+`tasks.reporter_id` is set from the logged-in user. `tasks.assignee_id` is optional. New projects always set `team_id`.
 
 - `tasks.status`: `todo` | `in_progress` | `done`
 - `tasks.priority`: `low` | `medium` | `high`
@@ -159,8 +161,7 @@ Open questions to settle and record in `DECISIONS.md`:
 | Invite or remove members | no | yes | yes |
 | Delete the team | no | no | yes |
 
-Invariant: a user can only access data of teams they belong to.  
-*(Enforced in Phase 4 — endpoints are open for now.)*
+Invariant: a user can only access data of teams they belong to. An outsider gets 404. A member who lacks the role gets 403. An admin may invite members. Only the owner may invite an admin or delete the team.
 
 ---
 
@@ -171,17 +172,16 @@ All app routes live under `/api/v1` (except health).
 | Group | Endpoints | Status |
 |---|---|---|
 | Health | `GET /health` | Done |
-| Projects | `POST /projects`, `GET /projects`, `GET /projects/{id}`, `PATCH /projects/{id}`, `DELETE /projects/{id}` | Done |
+| Projects | `GET /projects`, `GET /projects/{id}`, `PATCH /projects/{id}`, `DELETE /projects/{id}` | Done |
 | Tasks | `POST /projects/{id}/tasks`, `GET /projects/{id}/tasks`, `GET /tasks/{id}`, `PATCH /tasks/{id}`, `DELETE /tasks/{id}` | Done |
 | Users | `POST /users`, `GET /users/{id}`, `PATCH /users/{id}`, `DELETE /users/{id}` | Done |
-| Auth | `POST /auth/login`, `POST /auth/refresh`, `GET /users/me` | Phase 3 |
-| Teams | `POST /teams`, `GET /teams`, `GET /teams/{id}`, `POST /teams/{id}/members`, `DELETE /teams/{id}/members/{user_id}` | Phase 4 |
+| Auth | `POST /auth/login`, `POST /auth/refresh` | Done |
+| Auth | `GET /users/me` | Done |
+| Teams | `POST /teams`, `GET /teams`, `GET /teams/{id}`, `DELETE /teams/{id}`, `POST /teams/{id}/members`, `DELETE /teams/{id}/members/{user_id}`, `POST /teams/{id}/projects` | Done |
 | Comments | `POST /tasks/{id}/comments`, `GET /tasks/{id}/comments` | Phase 5 |
 | Labels | `POST /projects/{id}/labels`, `GET /projects/{id}/labels` | Phase 5 |
 
-List query params: `?page=1&page_size=20` on project and task lists. Task lists also accept `status=todo` and `sort=delivery_date` (prefix `-` for descending). `assignee_id` comes with auth.
-
-Once teams exist (Phase 4), project creation moves under `POST /teams/{id}/projects`.
+List query params: `?page=1&page_size=20` on team, project, and task lists. Task lists also accept `status=todo` and `sort=delivery_date` (prefix `-` for descending). `assignee_id` comes with auth. Project creation is `POST /teams/{id}/projects`.
 
 Interactive docs: `/docs` (Swagger) and `/redoc`.
 
@@ -226,19 +226,19 @@ Rules for every phase:
 *Learn: password hashing, JWT, securing endpoints, dependencies.*
 - [x] Users table and migration
 - [x] Register with hashed passwords (argon2)
-- [ ] Login with hashed passwords
-- [ ] JWT access and refresh tokens
-- [ ] `get_current_user` dependency protecting all endpoints
-- [ ] `reporter_id` set from the authenticated user; `assignee_id` added
-- [ ] Tests for auth flows and unauthorized access
+- [x] Login with hashed passwords
+- [x] JWT access and refresh tokens
+- [x] `get_current_user` dependency protecting all endpoints
+- [x] `reporter_id` set from the authenticated user; `assignee_id` added
+- [x] Tests for auth flows and unauthorized access
 
 ### Phase 4: Teams and authorization
 *Learn: many-to-many relations, role-based access control, data isolation.*
-- [ ] Teams and team members, migration
-- [ ] Projects belong to teams
-- [ ] Role-based permissions (owner / admin / member)
-- [ ] Team-level data isolation (users only see their teams' data)
-- [ ] Permission tests for every role on every sensitive endpoint
+- [x] Teams and team members, migration
+- [x] Projects belong to teams
+- [x] Role-based permissions (owner / admin / member)
+- [x] Team-level data isolation (users only see their teams' data)
+- [x] Permission tests for every role on every sensitive endpoint
 
 ### Phase 5: Domain completion
 *Learn: more relations, query design, auditing.*
