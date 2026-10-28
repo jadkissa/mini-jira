@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: mini_jira
+          POSTGRES_PASSWORD: mini_jira
+          POSTGRES_DB: mini_jira
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mini_jira -d mini_jira"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        working-directory: backend
+        run: pip install -r requirements.txt
+
+      - name: Create the test database
+        working-directory: backend
+        run: |
+          python -c "import psycopg; psycopg.connect('postgresql://mini_jira:mini_jira@127.0.0.1:5432/mini_jira', autocommit=True).execute('CREATE DATABASE mini_jira_test')"
+
+      - name: Lint
+        working-directory: backend
+        run: ruff check .
+
+      - name: Test
+        working-directory: backend
+        run: pytest -q
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build API image
+        run: docker build -t mini-jira-api ./backend
