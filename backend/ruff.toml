@@ -1,0 +1,6 @@
+[lint]
+# FastAPI routes use Depends() and Query() as default values on purpose.
+ignore = ["B008"]
+
+[lint.isort]
+known-first-party = ["app", "tests"]

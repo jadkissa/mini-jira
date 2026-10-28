@@ -1,5 +1,7 @@
-from app.models.project import Project
 from sqlalchemy.orm import Session
+
+from app.models.project import Project
+
 
 class ProjectRepository:
     """Database access for projects."""

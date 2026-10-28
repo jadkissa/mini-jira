@@ -1,8 +1,6 @@
-from app.repositories.users import UserRepository
-from app.models.user import User
+from fastapi import HTTPException
 from jwt.exceptions import InvalidTokenError
 
-from app.schemas.user import AccessToken, LoginRequest, Token, UserCreate, UserUpdate
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -10,8 +8,9 @@ from app.core.security import (
     hash_password,
     verify_password,
 )
-
-from fastapi import HTTPException
+from app.models.user import User
+from app.repositories.users import UserRepository
+from app.schemas.user import AccessToken, LoginRequest, Token, UserCreate, UserUpdate
 
 
 class AuthService:

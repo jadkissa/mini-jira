@@ -13,7 +13,6 @@ from app.repositories.users import UserRepository
 from app.schemas.task import TaskCreate, TaskStatus, TaskUpdate
 from app.services.access import MEMBER, require_membership
 
-
 _SORT_FIELDS = {"id", "delivery_date", "priority", "status", "created_at"}
 
 

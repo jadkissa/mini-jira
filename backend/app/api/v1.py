@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+
 from app.routers import activity, auth, comments, labels, projects, tasks, teams, users
 
 api_router = APIRouter(prefix="/api/v1")

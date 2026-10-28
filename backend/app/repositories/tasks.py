@@ -1,5 +1,7 @@
-from app.models.task import Task
 from sqlalchemy.orm import Session
+
+from app.models.task import Task
+
 
 class TaskRepository:
     """Database access for tasks."""

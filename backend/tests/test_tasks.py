@@ -1,6 +1,7 @@
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 
 from tests.helpers import create_project
+
 
 def test_create_task(client):
     """Creating a task under a project returns 201 and that project id."""
