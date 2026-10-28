@@ -3,155 +3,89 @@
 A task and project management backend (a simplified Jira/Trello) built with **FastAPI** and **PostgreSQL**.
 Teams create projects, break them into tasks, assign them, comment, and track progress.
 
-The goal of this project is to practice and demonstrate production-style backend engineering:
-clean layered architecture, secure authentication, automated tests, background jobs, performance work,
-and a full CI/CD pipeline.
-
-> **Status:** Phase 5 done — comments, labels, and an activity log.  
-> Next: Phase 6, coverage and CI. That part is left for you to build.  
-> Progress is tracked in the [Roadmap](#roadmap).
-
----
-
-## Table of contents
-
-1. [Features](#features)
-2. [Tech stack](#tech-stack)
-3. [Architecture](#architecture)
-4. [Data model](#data-model)
-5. [Roles and permissions](#roles-and-permissions)
-6. [API overview](#api-overview)
-7. [Roadmap](#roadmap)
-8. [Development workflow](#development-workflow)
-9. [Getting started](#getting-started)
-10. [Testing](#testing)
-11. [Design decisions](#design-decisions)
-
----
+The learning plan lives in [ROADMAP.md](ROADMAP.md).
 
 ## Features
 
-**Implemented now**
-- Projects CRUD
-- Tasks CRUD nested under projects (`POST/GET /projects/{id}/tasks`)
-- Task status (`todo` / `in_progress` / `done`) and priority
-- `duration_days` + computed `delivery_date`
-- Cascade delete: deleting a project removes its tasks
-- Routers, services, and repositories for projects, tasks, users, and teams
-- Pagination on list endpoints. Task lists also filter by `status` and accept `sort`
-- User registration and user get/update/delete. Passwords are stored as an argon2 hash
-- Login returns a JWT access token and a refresh token. `POST /auth/refresh` issues a new access token
-- Project, task, and user routes except registration require that access token. `GET /users/me` returns the logged-in user
-- New tasks store `reporter_id` from the logged-in user. `assignee_id` is optional
-- Teams with owner, admin, and member roles. Projects belong to a team. Users only see teams they belong to
-- Comments on tasks, labels on projects, and an activity log for task changes
-- OpenAPI tags at `/docs`. A Postman collection is in `postman/mini-jira.postman_collection.json`
-- Health check, OpenAPI docs at `/docs`
+- Projects and tasks. Tasks have a status (`todo`, `in_progress`, `done`), a priority, and an optional `duration_days`. `delivery_date` is computed from that duration.
+- Teams with owner, admin, and member roles. A project belongs to a team. Users only see data for teams they belong to.
+- Register and login. Passwords are stored as an argon2 hash. Login returns a JWT access token and a refresh token.
+- New tasks store `reporter_id` from the logged-in user. `assignee_id` is optional.
+- Comments on tasks, labels on projects, and an activity log for task changes.
+- List endpoints accept `?page=1&page_size=20`. Task lists also accept `status` and `sort`.
+- Health check and OpenAPI docs. A Postman collection is in `postman/mini-jira.postman_collection.json`.
 
-**Planned (later phases)**
-- Background jobs, Redis cache, rate limiting
-- Optional: OAuth, GraphQL, WebSockets
-
----
+Still planned: background jobs, Redis cache, rate limiting, and optional OAuth, GraphQL, and WebSockets. See the roadmap.
 
 ## Tech stack
 
-| Area             | Choice                                         | Introduced in |
-| ---------------- | ---------------------------------------------- | ------------- |
-| Language         | Python 3.12+                                   | Phase 0       |
-| Framework        | FastAPI                                        | Phase 1       |
-| Validation       | Pydantic v2                                    | Phase 1       |
-| Tests            | pytest, httpx                                  | Phase 1       |
-| Lint / format    | Ruff                                           | Phase 0       |
-| Database         | PostgreSQL                                     | Phase 2       |
-| ORM / migrations | SQLAlchemy 2.0 + Alembic                       | Phase 2       |
-| Containers       | Docker, Docker Compose                         | Phase 2 (DB), Phase 6 (app) |
-| Auth             | JWT, argon2 password hashing                   | Phase 3       |
-| CI               | GitHub Actions                                 | Phase 6       |
-| Cache / broker   | Redis                                          | Phase 7       |
-| Background jobs  | Celery (worker + beat)                         | Phase 7       |
-| CD / deployment  | GitHub Actions + VPS or AWS                    | Phase 9       |
-| Later            | Kubernetes, Prometheus metrics                 | Phase 9       |
-
----
+| Area | Choice |
+|---|---|
+| Language | Python 3.12+ |
+| Framework | FastAPI |
+| Validation | Pydantic v2 |
+| Database | PostgreSQL, SQLAlchemy 2.0, Alembic |
+| Auth | JWT, argon2 |
+| Tests | pytest |
+| Lint | Ruff |
+| Containers | Docker, Docker Compose |
+| CI | GitHub Actions |
 
 ## Architecture
 
-Layers:
-
-- **Routers**: HTTP only. Parse the request, call a service, return a response.
-- **Services**: business logic and permission rules. No HTTP and no SQL.
-- **Repositories**: all database queries live here.
-- **Models**: SQLAlchemy tables.
-- **Schemas**: Pydantic models for request and response bodies.
-
-Current flow:
+- **Routers** handle HTTP. They parse the request, call a service, and return a response.
+- **Services** hold business rules and permissions. No SQL.
+- **Repositories** hold every database query.
+- **Models** are SQLAlchemy tables. **Schemas** are Pydantic request and response bodies.
 
 ```
 Client -> Router -> Service -> Repository -> PostgreSQL
 ```
-
-Celery (via Redis) is added beside the service in Phase 7 for slow work.
-
-Layout:
 
 ```
 mini-jira/
 ├── backend/
 │   ├── app/
 │   │   ├── main.py
-│   │   ├── api/v1.py        # /api/v1 router mount
-│   │   ├── core/            # config, password hashing
-│   │   ├── db/              # session, base
+│   │   ├── api/v1.py
+│   │   ├── core/
+│   │   ├── db/
 │   │   ├── models/
 │   │   ├── schemas/
 │   │   ├── routers/
 │   │   ├── repositories/
-│   │   ├── services/
-│   │   └── workers/         # Celery (Phase 7)
+│   │   └── services/
 │   ├── alembic/
+│   ├── tests/
 │   ├── Dockerfile
 │   ├── requirements.txt
+│   ├── ruff.toml
 │   └── .env.example
-├── docker-compose.yml       # api + Postgres
-├── .env.example             # Compose vars (optional)
+├── .github/workflows/ci.yml
+├── docker-compose.yml
+├── postman/
 ├── DECISIONS.md
+├── ROADMAP.md
 └── README.md
 ```
 
----
-
 ## Data model
 
-Each table is added in the phase that needs it.
+| Table | Main fields |
+|---|---|
+| users | id, email (unique), hashed_password, full_name, is_active, created_at |
+| teams | id, name, owner_id, created_at |
+| team_members | team_id, user_id, role (`owner`, `admin`, `member`) |
+| projects | id, name, description, team_id, created_at, updated_at |
+| tasks | id, project_id, title, description, status, priority, duration_days, delivery_date, reporter_id, assignee_id, created_at, updated_at |
+| comments | id, task_id, author_id, body, created_at |
+| labels | id, project_id, name, color |
+| task_labels | task_id, label_id |
+| activity_log | id, task_id, actor_id, action, old_value, new_value, created_at |
 
-| Table | Main fields | Phase |
-|---|---|---|
-| projects | id, name, description, team_id, created_at, updated_at | 1-4 |
-| tasks | id, project_id, title, description, status, priority, duration_days, delivery_date, reporter_id, assignee_id, created_at, updated_at | 1-3 |
-| users | id, email (unique), hashed_password, full_name, is_active, created_at | 3 |
-| teams | id, name, owner_id, created_at | 4 |
-| team_members | team_id, user_id, role (owner / admin / member) | 4 |
-| comments | id, task_id, author_id, body, created_at | 5 |
-| labels, task_labels | label: id, project_id, name, color; join table task_id + label_id | 5 |
-| activity_log | id, task_id, actor_id, action, old_value, new_value, created_at | 5 |
+`delivery_date` is the UTC date of `created_at` plus `duration_days`, when a duration is set. Deleting a project cascades to its tasks. Timestamps are timezone-aware UTC.
 
-`tasks.reporter_id` is set from the logged-in user. `tasks.assignee_id` is optional. New projects always set `team_id`. Task create, field changes, comments, and label attach/remove write a row in `activity_log`.
-
-- `tasks.status`: `todo` | `in_progress` | `done`
-- `tasks.priority`: `low` | `medium` | `high`
-- `delivery_date` = `created_at.date() + duration_days` (when `duration_days` is set)
-- Deleting a project **cascades** to its tasks (ORM + DB `ON DELETE CASCADE`)
-- Timestamps use timezone-aware UTC (`timestamptz`)
-
-Open questions to settle and record in `DECISIONS.md`:
-- One assignee per task, or many?
-- Soft delete or hard delete for tasks and projects?
-- Which columns need indexes (think about filters and joins)?
-
----
-
-## Roles and permissions
+## Roles
 
 | Action | Member | Admin | Owner |
 |---|---|---|---|
@@ -163,142 +97,27 @@ Open questions to settle and record in `DECISIONS.md`:
 | Invite or remove members | no | yes | yes |
 | Delete the team | no | no | yes |
 
-Invariant: a user can only access data of teams they belong to. An outsider gets 404. A member who lacks the role gets 403. An admin may invite members. Only the owner may invite an admin or delete the team.
+An outsider gets 404. A member who lacks the role gets 403. An admin may invite members. Only the owner may invite an admin or delete the team.
 
----
+## API
 
-## API overview
+All app routes live under `/api/v1`. `GET /health` does not.
 
-All app routes live under `/api/v1` (except health).
+| Group | Endpoints |
+|---|---|
+| Health | `GET /health` |
+| Auth | `POST /auth/login`, `POST /auth/refresh`, `GET /users/me` |
+| Users | `POST /users`, `GET /users/{id}`, `PATCH /users/{id}`, `DELETE /users/{id}` |
+| Teams | `POST /teams`, `GET /teams`, `GET /teams/{id}`, `DELETE /teams/{id}`, `POST /teams/{id}/members`, `DELETE /teams/{id}/members/{user_id}`, `POST /teams/{id}/projects` |
+| Projects | `GET /projects`, `GET /projects/{id}`, `PATCH /projects/{id}`, `DELETE /projects/{id}` |
+| Tasks | `POST /projects/{id}/tasks`, `GET /projects/{id}/tasks`, `GET /tasks/{id}`, `PATCH /tasks/{id}`, `DELETE /tasks/{id}` |
+| Comments | `POST /tasks/{id}/comments`, `GET /tasks/{id}/comments` |
+| Labels | `POST /projects/{id}/labels`, `GET /projects/{id}/labels`, `DELETE /projects/{id}/labels/{label_id}`, `GET /tasks/{id}/labels`, `POST /tasks/{id}/labels`, `DELETE /tasks/{id}/labels/{label_id}` |
+| Activity | `GET /tasks/{id}/activity` |
 
-| Group | Endpoints | Status |
-|---|---|---|
-| Health | `GET /health` | Done |
-| Projects | `GET /projects`, `GET /projects/{id}`, `PATCH /projects/{id}`, `DELETE /projects/{id}` | Done |
-| Tasks | `POST /projects/{id}/tasks`, `GET /projects/{id}/tasks`, `GET /tasks/{id}`, `PATCH /tasks/{id}`, `DELETE /tasks/{id}` | Done |
-| Users | `POST /users`, `GET /users/{id}`, `PATCH /users/{id}`, `DELETE /users/{id}` | Done |
-| Auth | `POST /auth/login`, `POST /auth/refresh` | Done |
-| Auth | `GET /users/me` | Done |
-| Teams | `POST /teams`, `GET /teams`, `GET /teams/{id}`, `DELETE /teams/{id}`, `POST /teams/{id}/members`, `DELETE /teams/{id}/members/{user_id}`, `POST /teams/{id}/projects` | Done |
-| Comments | `POST /tasks/{id}/comments`, `GET /tasks/{id}/comments` | Done |
-| Labels | `POST /projects/{id}/labels`, `GET /projects/{id}/labels`, `DELETE /projects/{id}/labels/{label_id}`, `GET /tasks/{id}/labels`, `POST /tasks/{id}/labels`, `DELETE /tasks/{id}/labels/{label_id}` | Done |
-| Activity | `GET /tasks/{id}/activity` | Done |
+`POST /users`, `POST /auth/login`, and `POST /auth/refresh` are public. Every other route needs `Authorization: Bearer <access_token>`.
 
-List query params: `?page=1&page_size=20` on team, project, task, comment, label, and activity lists. Task lists also accept `status=todo` and `sort=delivery_date` (prefix `-` for descending). `assignee_id` comes with auth. Project creation is `POST /teams/{id}/projects`.
-
-Interactive docs: `/docs` (Swagger) and `/redoc`. Import `postman/mini-jira.postman_collection.json` to call the same routes from Postman. Run **Login** first; it stores the access token.
-
----
-
-## Roadmap
-
-Rules for every phase:
-- **Tests are written alongside the code**, not after it. A phase is not done without them.
-- Each phase ends with something you can **demo and explain without notes**.
-- Each phase is delivered through feature branches and pull requests.
-- Important choices get 3 lines in `DECISIONS.md`.
-
-### Phase 0: Foundation and tooling
-*Learn: project setup, Git workflow, configuration.*
-- [x] Repo, `.gitignore`, virtual environment, `requirements.txt`
-- [ ] Ruff configured (lint + format)
-- [x] Settings loaded from environment variables (`pydantic-settings`), `.env.example`
-- [x] `GET /health` endpoint
-- [x] pytest configured with the first test (for `/health`)
-- [x] README scope and tech stack finalized
-
-### Phase 1: FastAPI fundamentals
-*Learn: routing, path/query parameters, Pydantic validation, status codes, error handling, dependency injection basics.*  
-*(We moved persistence earlier and skipped a long-lived in-memory store.)*
-- [x] Projects CRUD with Pydantic schemas
-- [x] Tasks CRUD under projects, status as enum
-- [x] Consistent error responses (404, 422)
-- [x] Routers separated from schemas, versioned under `/api/v1`
-- [ ] Tests for every endpoint (success and failure cases)
-
-### Phase 2: Persistence
-*Learn: relational modeling, ORM, migrations, the repository pattern, containers for local services.*
-- [x] Data model for projects and tasks
-- [x] Docker Compose with PostgreSQL (+ API image)
-- [x] SQLAlchemy 2.0 models and Alembic migrations
-- [x] Repository layer + services layer
-- [x] Pagination, filtering and sorting on list endpoints
-- [x] Separate test database and fixtures; tests still pass
-
-### Phase 3: Authentication
-*Learn: password hashing, JWT, securing endpoints, dependencies.*
-- [x] Users table and migration
-- [x] Register with hashed passwords (argon2)
-- [x] Login with hashed passwords
-- [x] JWT access and refresh tokens
-- [x] `get_current_user` dependency protecting all endpoints
-- [x] `reporter_id` set from the authenticated user; `assignee_id` added
-- [x] Tests for auth flows and unauthorized access
-
-### Phase 4: Teams and authorization
-*Learn: many-to-many relations, role-based access control, data isolation.*
-- [x] Teams and team members, migration
-- [x] Projects belong to teams
-- [x] Role-based permissions (owner / admin / member)
-- [x] Team-level data isolation (users only see their teams' data)
-- [x] Permission tests for every role on every sensitive endpoint
-
-### Phase 5: Domain completion
-*Learn: more relations, query design, auditing.*
-- [x] Comments
-- [x] Labels and task labels
-- [x] Activity log
-- [x] Swagger docs cleaned up, Postman collection exported
-- [x] Tests for the new endpoints
-
-### Phase 6: Quality and CI
-*Learn: containerizing an app, automated pipelines, coverage.*
-- [x] Dockerfile for the API, Docker Compose (API + DB)
-- [ ] Coverage report (target 70%+)
-- [ ] GitHub Actions: lint, test, build image on every push and pull request
-- [ ] README "Getting started" works from a clean clone
-
-> After Phase 6 the project is solid enough to put on a CV and apply with. Later phases make it stand out.
-
-### Phase 7: Background jobs
-*Learn: message brokers, workers, scheduled tasks, why work leaves the request cycle.*
-- [ ] Redis and Celery worker added to Docker Compose
-- [ ] Notification task when a task is assigned
-- [ ] Due-date reminders with Celery beat
-- [ ] Tests for tasks (eager mode) and retry behavior
-
-### Phase 8: Performance and reliability
-*Learn: measuring before optimizing.*
-- [ ] Indexes based on real queries (check with `EXPLAIN`)
-- [ ] Fix N+1 queries
-- [ ] Redis caching for heavy endpoints, with invalidation rules
-- [ ] Rate limiting
-- [ ] Load test (locust or k6); before/after numbers recorded here
-- [ ] (Optional) Migrate database access to async, documented as a decision
-
-### Phase 9: Deployment and observability
-*Learn: delivery, operations, monitoring.*
-- [ ] CD: deploy automatically on merge to `main` (VPS or AWS)
-- [ ] Structured logging and health checks
-- [ ] Basic metrics (Prometheus)
-- [ ] Kubernetes manifests (Deployment, Service, ConfigMap, Secret)
-
-### Phase 10: Optional extras
-- [ ] OAuth login (Google / GitHub)
-- [ ] GraphQL read endpoint
-- [ ] WebSockets for live updates
-- [ ] Architecture diagram and screenshots in this README
-
----
-
-## Development workflow
-
-- No direct commits to `main`. One branch per feature, for example `feature/projects-crud`.
-- Commit messages follow Conventional Commits: `feat: add task creation endpoint`, `fix: ...`, `test: ...`, `chore: ...`.
-- Every change goes through a pull request, even when working alone.
-- Secrets are never committed. Only `.env.example` is tracked.
-
----
+Interactive docs: `/docs` and `/redoc`. Import `postman/mini-jira.postman_collection.json` to call the same routes from Postman. Run **Login** first. It stores the access token.
 
 ## Getting started
 
@@ -316,7 +135,7 @@ cp backend/.env.example backend/.env
 docker compose up -d db
 ```
 
-**3. Backend venv + deps**
+**3. Backend venv and dependencies**
 
 ```bash
 cd backend
@@ -337,13 +156,9 @@ alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
-Open:
-- Docs: http://127.0.0.1:8000/docs  
-- Health: http://127.0.0.1:8000/health  
+Open the docs at http://127.0.0.1:8000/docs and the health check at http://127.0.0.1:8000/health.
 
-Optional: run API in Docker too with `docker compose up --build` (Compose sets `DATABASE_URL` host to `db`).
-
----
+`docker compose up --build` runs the API in Docker as well. Compose points `DATABASE_URL` at the `db` service.
 
 ## Testing
 
@@ -354,11 +169,14 @@ docker exec -it mini-jira-db psql -U mini_jira -c "CREATE DATABASE mini_jira_tes
 pytest
 ```
 
-Create `mini_jira_test` once. Each test builds and drops its own tables there. Coverage (`pytest --cov=app`) is planned for Phase 6.
+Create `mini_jira_test` once. Each test builds and drops its own tables there.
 
----
+GitHub Actions lints the code, runs these tests, and builds the API image on every push and pull request.
 
-## Design decisions
+## Development
 
-A running log lives in [`DECISIONS.md`](DECISIONS.md). For each important choice write three lines:
-what was chosen, what the alternatives were, and why.
+- One branch per feature, for example `feature/projects-crud`.
+- Commit messages follow Conventional Commits: `feat: add task creation endpoint`, `fix: ...`, `test: ...`, `chore: ...`.
+- Secrets stay local. Only `.env.example` is tracked.
+
+Choices that are already settled are recorded in [DECISIONS.md](DECISIONS.md).
