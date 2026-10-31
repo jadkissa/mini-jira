@@ -179,4 +179,4 @@ GitHub Actions lints the code, runs these tests, and builds the API image on eve
 - Commit messages follow Conventional Commits: `feat: add task creation endpoint`, `fix: ...`, `test: ...`, `chore: ...`.
 - Secrets stay local. Only `.env.example` is tracked.
 
-Choices that are already settled are recorded in [DECISIONS.md](DECISIONS.md).
+Choices that are already settled are recorded in [DECISIONS.md](DECISIONS.md). Problems hit while building the project are in [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
