@@ -10,6 +10,7 @@ The learning plan lives in [ROADMAP.md](ROADMAP.md).
 - Projects and tasks. Tasks have a status (`todo`, `in_progress`, `done`), a priority, and an optional `duration_days`. `delivery_date` is computed from that duration.
 - Teams with owner, admin, and member roles. A project belongs to a team. Users only see data for teams they belong to.
 - Register and login. Passwords are stored as an argon2 hash. Login returns a JWT access token and a refresh token.
+- Users can only edit or delete their own account. A superuser can manage every user and acts as owner on every team. Deactivated users cannot log in.
 - New tasks store `reporter_id` from the logged-in user. `assignee_id` is optional.
 - Comments on tasks, labels on projects, and an activity log for task changes.
 - List endpoints accept `?page=1&page_size=20`. Task lists also accept `status` and `sort`.
@@ -52,7 +53,9 @@ A protected request is decided in this order:
 flowchart TD
   Request --> Token{Valid access token?}
   Token -->|no| Denied401[401]
-  Token -->|yes| Member{Member of the team?}
+  Token -->|yes| Super{Superuser?}
+  Super -->|yes| Action
+  Super -->|no| Member{Member of the team?}
   Member -->|no| Hidden404[404]
   Member -->|yes| Role{Role allows this action?}
   Role -->|no| Forbidden403[403]
@@ -71,6 +74,7 @@ mini-jira/
 │   │   ├── schemas/
 │   │   ├── routers/
 │   │   ├── repositories/
+│   │   ├── scripts/
 │   │   └── services/
 │   ├── alembic/
 │   ├── tests/
@@ -108,7 +112,7 @@ erDiagram
 
 | Table | Main fields |
 |---|---|
-| users | id, email (unique), hashed_password, full_name, is_active, created_at |
+| users | id, email (unique), hashed_password, full_name, is_active, is_superuser, created_at |
 | teams | id, name, owner_id, created_at |
 | team_members | team_id, user_id, role (`owner`, `admin`, `member`) |
 | projects | id, name, description, team_id, created_at, updated_at |
@@ -133,6 +137,21 @@ erDiagram
 | Delete the team | no | no | yes |
 
 An outsider gets 404. A member who lacks the role gets 403. An admin may invite members. Only the owner may invite an admin or delete the team.
+
+The team admin role above is per team. A **superuser** is different: it is a flag on the user and works across the whole app.
+
+| Action | Normal user | Superuser |
+|---|---|---|
+| Edit or delete your own account | yes | yes |
+| Edit or delete another user | no | yes |
+| Change `is_active` or `is_superuser` | no | yes |
+| See and manage every team, project, and task, as owner | no | yes |
+
+Nobody can become a superuser through the API. Promote an existing user from `backend/`:
+
+```bash
+python -m app.scripts.make_superuser someone@example.com
+```
 
 ## API
 
@@ -205,7 +224,7 @@ pytest
 pytest --cov=app
 ```
 
-Create `mini_jira_test` once. Each test builds and drops its own tables there. The latest local coverage run was 40 tests and 93%.
+Create `mini_jira_test` once. Each test builds and drops its own tables there. The latest local coverage run was 47 tests and 94%.
 
 GitHub Actions lints the code, runs `pytest`, and builds the API image on every push and pull request. That job does not enforce the coverage number yet.
 

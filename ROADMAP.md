@@ -65,6 +65,8 @@ Persistence moved earlier, so there was no long-lived in-memory store.
 - [x] Role-based permissions (owner / admin / member)
 - [x] Team-level data isolation (users only see their teams' data)
 - [x] Permission tests for every role on every sensitive endpoint
+- [x] Users can only edit or delete themselves; superuser with full permissions
+- [x] `is_active` enforced on login, refresh, and every authenticated request
 
 ## Phase 5: Domain completion
 
@@ -81,7 +83,7 @@ Persistence moved earlier, so there was no long-lived in-memory store.
 *Learn: containerizing an app, automated pipelines, coverage.*
 
 - [x] Dockerfile for the API, Docker Compose (API + DB)
-- [x] Coverage report. Local run: 40 tests, 93% (target was 70%+). `pytest-cov` is in `requirements.txt`
+- [x] Coverage report. Local run: 47 tests, 94% (target was 70%+). `pytest-cov` is in `requirements.txt`
 - [x] GitHub Actions: lint, test, and build the image on every push and pull request
 - [ ] CI still runs `pytest -q`. It does not fail the job when coverage drops under 70%
 - [ ] README "Getting started" works from a clean clone
