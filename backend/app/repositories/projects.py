@@ -28,6 +28,13 @@ class ProjectRepository:
             .all()
         )
 
+    def list_all(self, page: int, page_size: int) -> list[Project]:
+        """Return one page of every project."""
+        offset = (page - 1) * page_size
+        return (
+            self.db.query(Project).order_by(Project.id).offset(offset).limit(page_size).all()
+        )
+
     def create(self, project: Project) -> Project:
         """Insert a project and return it with its database id."""
         self.db.add(project)

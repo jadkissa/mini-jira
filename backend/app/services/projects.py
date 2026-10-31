@@ -24,7 +24,9 @@ class ProjectService:
         return self.repo.create(project)
 
     def list(self, user_id: int, page: int, page_size: int) -> list[Project]:
-        """Return one page of projects from the user's teams."""
+        """Return one page of projects from the user's teams, or every project for a superuser."""
+        if self.team_repo.is_superuser(user_id):
+            return self.repo.list_all(page, page_size)
         team_ids = self.team_repo.team_ids_for_user(user_id)
         return self.repo.list_for_teams(team_ids, page, page_size)
 

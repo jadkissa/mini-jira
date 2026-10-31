@@ -19,9 +19,16 @@ def require_membership(
     user_id: int,
     detail: str = "Team not found",
 ) -> TeamMember:
-    """Return the membership, or 404 when the user is outside the team."""
+    """Return the membership, or 404 when the user is outside the team.
+
+    A superuser gets an unsaved owner membership on every existing team.
+    """
     if team_id is None:
         raise HTTPException(status_code=404, detail=detail)
+    if repo.is_superuser(user_id):
+        if not repo.get_by_id(team_id):
+            raise HTTPException(status_code=404, detail=detail)
+        return TeamMember(team_id=team_id, user_id=user_id, role=OWNER)
     membership = repo.get_membership(team_id, user_id)
     if not membership:
         raise HTTPException(status_code=404, detail=detail)

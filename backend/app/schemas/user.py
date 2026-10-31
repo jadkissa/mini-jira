@@ -13,6 +13,8 @@ class UserRead(BaseModel):
     id: int
     email: str
     full_name: str
+    is_active: bool
+    is_superuser: bool
     created_at: datetime 
 
 class LoginRequest(BaseModel):
@@ -40,4 +42,5 @@ class UserUpdate(BaseModel):
     full_name: str | None = None
     password: str | None = None
     is_active: bool | None = None
+    is_superuser: bool | None = None
 

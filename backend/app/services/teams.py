@@ -30,7 +30,9 @@ class TeamService:
         return team
 
     def list(self, user_id: int, page: int, page_size: int) -> list[Team]:
-        """Return teams the user belongs to."""
+        """Return teams the user belongs to, or every team for a superuser."""
+        if self.repo.is_superuser(user_id):
+            return self.repo.list_all(page, page_size)
         return self.repo.list_for_user(user_id, page, page_size)
 
     def get(self, team_id: int, user_id: int) -> Team:

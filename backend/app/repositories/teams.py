@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 
 from app.models.team import Team, TeamMember
+from app.models.user import User
 
 
 class TeamRepository:
@@ -25,6 +26,16 @@ class TeamRepository:
             .limit(page_size)
             .all()
         )
+
+    def list_all(self, page: int, page_size: int) -> list[Team]:
+        """Return one page of every team."""
+        offset = (page - 1) * page_size
+        return self.db.query(Team).order_by(Team.id).offset(offset).limit(page_size).all()
+
+    def is_superuser(self, user_id: int) -> bool:
+        """Return True when this user has full permissions on every team."""
+        user = self.db.get(User, user_id)
+        return bool(user and user.is_superuser)
 
     def create(self, team: Team) -> Team:
         """Insert a team and return it."""

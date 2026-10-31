@@ -40,17 +40,17 @@ def update_user(
     user_id: int,
     payload: UserUpdate,
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
-    """Update the fields sent in the body and return the user."""
-    return _service(db).update(user_id, payload)
+    """Update yourself, or anyone if you are a superuser."""
+    return _service(db).update(user_id, payload, current_user)
 
 
 @router.delete("/users/{user_id}", status_code=204)
 def delete_user(
     user_id: int,
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
-    """Delete a user, or 404 if they do not exist."""
-    _service(db).delete(user_id)
+    """Delete yourself, or anyone if you are a superuser."""
+    _service(db).delete(user_id, current_user)
