@@ -26,7 +26,7 @@ Still planned: background jobs, Redis cache, rate limiting, and optional OAuth, 
 | Validation | Pydantic v2 |
 | Database | PostgreSQL, SQLAlchemy 2.0, Alembic |
 | Auth | JWT, argon2 |
-| Tests | pytest |
+| Tests | pytest, pytest-cov |
 | Lint | Ruff |
 | Containers | Docker, Docker Compose |
 | CI | GitHub Actions |
@@ -66,6 +66,7 @@ mini-jira/
 ├── postman/
 ├── DECISIONS.md
 ├── ROADMAP.md
+├── TROUBLESHOOTING.md
 └── README.md
 ```
 
@@ -167,11 +168,12 @@ From `backend/`, with Postgres running and a database named `mini_jira_test`:
 ```bash
 docker exec -it mini-jira-db psql -U mini_jira -c "CREATE DATABASE mini_jira_test;"
 pytest
+pytest --cov=app
 ```
 
-Create `mini_jira_test` once. Each test builds and drops its own tables there.
+Create `mini_jira_test` once. Each test builds and drops its own tables there. The latest local coverage run was 40 tests and 93%.
 
-GitHub Actions lints the code, runs these tests, and builds the API image on every push and pull request.
+GitHub Actions lints the code, runs `pytest`, and builds the API image on every push and pull request. That job does not enforce the coverage number yet.
 
 ## Development
 

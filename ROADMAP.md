@@ -14,7 +14,8 @@ Rules for every phase:
 *Learn: project setup, Git workflow, configuration.*
 
 - [x] Repo, `.gitignore`, virtual environment, `requirements.txt`
-- [ ] Ruff configured (lint + format)
+- [x] Ruff lint configured (`backend/ruff.toml`) and run in CI
+- [ ] Ruff format
 - [x] Settings loaded from environment variables (`pydantic-settings`), `.env.example`
 - [x] `GET /health` endpoint
 - [x] pytest configured with the first test (for `/health`)
@@ -80,8 +81,9 @@ Persistence moved earlier, so there was no long-lived in-memory store.
 *Learn: containerizing an app, automated pipelines, coverage.*
 
 - [x] Dockerfile for the API, Docker Compose (API + DB)
-- [ ] Coverage report (target 70%+)
-- [x] GitHub Actions: lint, test, build image on every push and pull request
+- [x] Coverage report. Local run: 40 tests, 93% (target was 70%+). `pytest-cov` is in `requirements.txt`
+- [x] GitHub Actions: lint, test, and build the image on every push and pull request
+- [ ] CI still runs `pytest -q`. It does not fail the job when coverage drops under 70%
 - [ ] README "Getting started" works from a clean clone
 
 After Phase 6 the project is solid enough to put on a CV. Later phases make it stand out.
