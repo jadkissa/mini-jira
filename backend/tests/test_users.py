@@ -23,7 +23,7 @@ def test_user_can_update_and_delete_self(client):
 
 def test_user_cannot_update_or_delete_others(client):
     other = register(client, "other@example.com", "Other")
-    response = client.patch(f"/api/v1/users/{other['id']}", json={"password": "hacked"})
+    response = client.patch(f"/api/v1/users/{other['id']}", json={"password": "hacked12"})
     assert response.status_code == 403
     assert client.delete(f"/api/v1/users/{other['id']}").status_code == 403
 
@@ -34,6 +34,26 @@ def test_user_cannot_grant_themselves_superuser(client):
     assert response.status_code == 403
     response = client.patch(f"/api/v1/users/{me['id']}", json={"is_active": False})
     assert response.status_code == 403
+
+
+def test_cannot_delete_user_who_owns_a_team(client):
+    me = client.get("/api/v1/users/me").json()
+    assert client.post("/api/v1/teams", json={"name": "Mine"}).status_code == 201
+    response = client.delete(f"/api/v1/users/{me['id']}")
+    assert response.status_code == 409
+
+
+def test_register_rejects_bad_email_and_short_password(client):
+    short = client.post(
+        "/api/v1/users",
+        json={"email": "ada@example.com", "password": "short", "full_name": "Ada"},
+    )
+    assert short.status_code == 422
+    bad_email = client.post(
+        "/api/v1/users",
+        json={"email": "not-an-email", "password": "secret12", "full_name": "Ada"},
+    )
+    assert bad_email.status_code == 422
 
 
 def test_email_change_to_taken_email_conflicts(client):
@@ -53,7 +73,7 @@ def test_superuser_can_manage_other_users(client):
     assert client.patch(f"/api/v1/users/{other['id']}", json={"is_active": False}).status_code == 200
     login = client.post(
         "/api/v1/auth/login",
-        json={"email": "other@example.com", "password": "secret"},
+        json={"email": "other@example.com", "password": "secret12"},
     )
     assert login.status_code == 403
     assert client.delete(f"/api/v1/users/{other['id']}").status_code == 204

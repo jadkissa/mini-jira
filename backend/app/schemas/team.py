@@ -1,7 +1,7 @@
 from datetime import datetime
 from enum import Enum
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class InviteRole(str, Enum):
@@ -10,7 +10,7 @@ class InviteRole(str, Enum):
 
 
 class TeamCreate(BaseModel):
-    name: str
+    name: str = Field(min_length=1)
 
 
 class TeamRead(BaseModel):

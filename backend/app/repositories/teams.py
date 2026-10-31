@@ -40,14 +40,18 @@ class TeamRepository:
     def create(self, team: Team) -> Team:
         """Insert a team and return it."""
         self.db.add(team)
-        self.db.commit()
+        self.db.flush()
         self.db.refresh(team)
         return team
 
     def delete(self, team: Team) -> None:
         """Delete a team. Projects are removed by the database cascade."""
         self.db.delete(team)
-        self.db.commit()
+        self.db.flush()
+
+    def owns_team(self, user_id: int) -> bool:
+        """Return True when this user is the owner_id of any team."""
+        return self.db.query(Team.id).filter(Team.owner_id == user_id).first() is not None
 
     def get_membership(self, team_id: int, user_id: int) -> TeamMember | None:
         """Return this user's membership on the team, or None."""
@@ -69,11 +73,11 @@ class TeamRepository:
     def add_member(self, member: TeamMember) -> TeamMember:
         """Insert a membership and return it."""
         self.db.add(member)
-        self.db.commit()
+        self.db.flush()
         self.db.refresh(member)
         return member
 
     def remove_member(self, member: TeamMember) -> None:
         """Remove a user from a team."""
         self.db.delete(member)
-        self.db.commit()
+        self.db.flush()

@@ -4,7 +4,7 @@ from tests.helpers import create_project
 def _register(client):
     client.post(
         "/api/v1/users",
-        json={"email": "ada@example.com", "password": "secret", "full_name": "Ada"},
+        json={"email": "ada@example.com", "password": "secret12", "full_name": "Ada"},
     )
 
 
@@ -14,7 +14,7 @@ def test_login_returns_tokens(client):
 
     response = client.post(
         "/api/v1/auth/login",
-        json={"email": "ada@example.com", "password": "secret"},
+        json={"email": "ada@example.com", "password": "secret12"},
     )
 
     assert response.status_code == 200
@@ -30,7 +30,7 @@ def test_login_with_wrong_password(client):
 
     response = client.post(
         "/api/v1/auth/login",
-        json={"email": "ada@example.com", "password": "wrong"},
+        json={"email": "ada@example.com", "password": "wrongpass"},
     )
 
     assert response.status_code == 401
@@ -41,7 +41,7 @@ def test_refresh_returns_access_token(client):
     _register(client)
     login = client.post(
         "/api/v1/auth/login",
-        json={"email": "ada@example.com", "password": "secret"},
+        json={"email": "ada@example.com", "password": "secret12"},
     )
 
     response = client.post(
@@ -58,7 +58,7 @@ def test_refresh_rejects_access_token(client):
     _register(client)
     login = client.post(
         "/api/v1/auth/login",
-        json={"email": "ada@example.com", "password": "secret"},
+        json={"email": "ada@example.com", "password": "secret12"},
     )
 
     response = client.post(
@@ -82,7 +82,7 @@ def test_projects_reject_refresh_token(client):
     """A refresh token cannot access protected routes."""
     login = client.post(
         "/api/v1/auth/login",
-        json={"email": "tester@example.com", "password": "secret"},
+        json={"email": "tester@example.com", "password": "secret12"},
     )
     client.headers["Authorization"] = f"Bearer {login.json()['refresh_token']}"
 
@@ -103,7 +103,7 @@ def test_register_does_not_return_password(client):
     """Registration returns the user and leaves the password out of the response."""
     response = client.post(
         "/api/v1/users",
-        json={"email": "new@example.com", "password": "secret", "full_name": "New"},
+        json={"email": "new@example.com", "password": "secret12", "full_name": "New"},
     )
 
     assert response.status_code == 201
@@ -119,7 +119,7 @@ def test_register_duplicate_email(client):
 
     response = client.post(
         "/api/v1/users",
-        json={"email": "ada@example.com", "password": "secret", "full_name": "Ada"},
+        json={"email": "ada@example.com", "password": "secret12", "full_name": "Ada"},
     )
 
     assert response.status_code == 409
@@ -129,7 +129,7 @@ def test_login_unknown_email(client):
     """An unknown email returns the same 401 as a wrong password."""
     response = client.post(
         "/api/v1/auth/login",
-        json={"email": "missing@example.com", "password": "secret"},
+        json={"email": "missing@example.com", "password": "secret12"},
     )
 
     assert response.status_code == 401

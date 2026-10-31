@@ -26,6 +26,7 @@ def main() -> None:
             sys.exit(f"No user with email {email}")
         user.is_superuser = True
         repo.update(user)
+        db.commit()
         print(f"{email} is now a superuser")
     finally:
         db.close()

@@ -9,6 +9,7 @@ from app.core.security import (
     verify_password,
 )
 from app.models.user import User
+from app.repositories.teams import TeamRepository
 from app.repositories.users import UserRepository
 from app.schemas.user import AccessToken, LoginRequest, Token, UserCreate, UserUpdate
 
@@ -16,8 +17,9 @@ _SUPERUSER_ONLY_FIELDS = {"is_active", "is_superuser"}
 
 
 class AuthService:
-    def __init__(self, repo: UserRepository):
+    def __init__(self, repo: UserRepository, team_repo: TeamRepository):
         self.repo = repo
+        self.team_repo = team_repo
 
     def register(self, payload: UserCreate) -> User:
         if self.repo.get_by_email(payload.email):
@@ -78,6 +80,8 @@ class AuthService:
     def delete(self, user_id: int, actor: User) -> None:
         """Users may delete themselves. A superuser may delete anyone."""
         self._require_self_or_superuser(user_id, actor)
+        if self.team_repo.owns_team(user_id):
+            raise HTTPException(status_code=409, detail="User owns a team")
         self.repo.delete(self.get(user_id))
 
     def _require_self_or_superuser(self, user_id: int, actor: User) -> None:

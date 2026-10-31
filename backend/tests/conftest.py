@@ -21,6 +21,10 @@ def client():
         db = TestingSessionLocal()
         try:
             yield db
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
         finally:
             db.close()
 
@@ -30,13 +34,13 @@ def client():
             "/api/v1/users",
             json={
                 "email": "tester@example.com",
-                "password": "secret",
+                "password": "secret12",
                 "full_name": "Tester",
             },
         )
         login = test_client.post(
             "/api/v1/auth/login",
-            json={"email": "tester@example.com", "password": "secret"},
+            json={"email": "tester@example.com", "password": "secret12"},
         )
         token = login.json()["access_token"]
         test_client.headers["Authorization"] = f"Bearer {token}"

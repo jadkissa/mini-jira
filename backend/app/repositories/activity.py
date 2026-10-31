@@ -24,6 +24,6 @@ class ActivityRepository:
     def create(self, entry: ActivityLog) -> ActivityLog:
         """Insert one activity row and return it."""
         self.db.add(entry)
-        self.db.commit()
+        self.db.flush()
         self.db.refresh(entry)
         return entry

@@ -9,7 +9,6 @@ from app.repositories.activity import ActivityRepository
 from app.repositories.projects import ProjectRepository
 from app.repositories.tasks import TaskRepository
 from app.repositories.teams import TeamRepository
-from app.repositories.users import UserRepository
 from app.schemas.task import TaskCreate, TaskStatus, TaskUpdate
 from app.services.access import MEMBER, require_membership
 
@@ -52,14 +51,12 @@ class TaskService:
         self,
         repo: TaskRepository,
         project_repo: ProjectRepository,
-        user_repo: UserRepository,
         team_repo: TeamRepository,
         activity_repo: ActivityRepository,
     ):
         """Store the repositories for this request."""
         self.repo = repo
         self.project_repo = project_repo
-        self.user_repo = user_repo
         self.team_repo = team_repo
         self.activity_repo = activity_repo
 
@@ -87,18 +84,19 @@ class TaskService:
             raise HTTPException(status_code=404, detail="Task not found")
         return task, membership
 
-    def _get_user_or_404(self, user_id: int):
-        """Return the user, or 404 if they do not exist."""
-        user = self.user_repo.get_by_id(user_id)
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
-        return user
+    def _require_team_assignee(self, team_id: int | None, assignee_id: int) -> None:
+        """The assignee must belong to the project's team."""
+        if team_id is not None and self.team_repo.get_membership(team_id, assignee_id):
+            return
+        if self.team_repo.is_superuser(assignee_id):
+            return
+        raise HTTPException(status_code=422, detail="Assignee is not a member of this team")
 
     def create(self, payload: TaskCreate, project_id: int, reporter_id: int) -> Task:
         """Create a task on a visible project, reported by the logged-in user."""
-        self._visible_project(project_id, reporter_id)
+        project, _ = self._visible_project(project_id, reporter_id)
         if payload.assignee_id is not None:
-            self._get_user_or_404(payload.assignee_id)
+            self._require_team_assignee(project.team_id, payload.assignee_id)
         now = datetime.now(UTC)
         task = Task(
             **payload.model_dump(),
@@ -137,7 +135,8 @@ class TaskService:
         task, _ = self._visible_task(task_id, user_id)
         data = payload.model_dump(exclude_unset=True)
         if data.get("assignee_id") is not None:
-            self._get_user_or_404(data["assignee_id"])
+            project = self.project_repo.get_by_id(task.project_id)
+            self._require_team_assignee(project.team_id if project else None, data["assignee_id"])
         changes: list[tuple[str, str | None, str | None]] = []
         for key, value in data.items():
             old = _as_text(getattr(task, key))

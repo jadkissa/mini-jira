@@ -11,9 +11,13 @@ engine = create_engine(settings.database_url)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def get_db() -> Generator[Session, None, None]:
-    """Open a database session for one request and close it afterward."""
+    """Open one session per request. Commit when it succeeds, roll back when it fails."""
     db = SessionLocal()
     try:
         yield db
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
     finally:
         db.close()

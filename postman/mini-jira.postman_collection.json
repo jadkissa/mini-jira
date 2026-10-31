@@ -23,7 +23,7 @@
             "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"ada@example.com\",\n  \"password\": \"secret\",\n  \"full_name\": \"Ada\"\n}"
+              "raw": "{\n  \"email\": \"ada@example.com\",\n  \"password\": \"secret12\",\n  \"full_name\": \"Ada\"\n}"
             },
             "url": "{{baseUrl}}/api/v1/users"
           }
@@ -46,7 +46,7 @@
             "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"ada@example.com\",\n  \"password\": \"secret\"\n}"
+              "raw": "{\n  \"email\": \"ada@example.com\",\n  \"password\": \"secret12\"\n}"
             },
             "url": "{{baseUrl}}/api/v1/auth/login"
           }

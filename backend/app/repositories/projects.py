@@ -38,17 +38,17 @@ class ProjectRepository:
     def create(self, project: Project) -> Project:
         """Insert a project and return it with its database id."""
         self.db.add(project)
-        self.db.commit()
+        self.db.flush()
         self.db.refresh(project)
         return project
 
     def update(self, project: Project) -> Project:
         """Save changes already made on the project and return it."""
-        self.db.commit()
+        self.db.flush()
         self.db.refresh(project)
         return project
 
     def delete(self, project: Project) -> None:
         """Delete the project. Its tasks are removed by the database cascade."""
         self.db.delete(project)
-        self.db.commit()
+        self.db.flush()

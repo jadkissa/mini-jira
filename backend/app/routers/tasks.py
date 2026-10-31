@@ -8,7 +8,6 @@ from app.repositories.activity import ActivityRepository
 from app.repositories.projects import ProjectRepository
 from app.repositories.tasks import TaskRepository
 from app.repositories.teams import TeamRepository
-from app.repositories.users import UserRepository
 from app.schemas.task import TaskCreate, TaskRead, TaskStatus, TaskUpdate
 from app.services.tasks import TaskService
 
@@ -20,7 +19,6 @@ def _service(db: Session) -> TaskService:
     return TaskService(
         TaskRepository(db),
         ProjectRepository(db),
-        UserRepository(db),
         TeamRepository(db),
         ActivityRepository(db),
     )

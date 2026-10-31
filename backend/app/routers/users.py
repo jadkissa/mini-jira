@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.core.deps import get_current_user
 from app.db.session import get_db
 from app.models.user import User
+from app.repositories.teams import TeamRepository
 from app.repositories.users import UserRepository
 from app.schemas.user import UserCreate, UserRead, UserUpdate
 from app.services.auth import AuthService
@@ -11,7 +12,7 @@ from app.services.auth import AuthService
 router = APIRouter(tags=["users"])
 
 def _service(db: Session) -> AuthService:
-    return AuthService(UserRepository(db))
+    return AuthService(UserRepository(db), TeamRepository(db))
 
 @router.post("/users", response_model=UserRead, status_code=201)
 def register_user(payload: UserCreate, db: Session = Depends(get_db)):

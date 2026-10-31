@@ -11,7 +11,7 @@ def register(client, email: str, full_name: str):
     """Register a user and return the response body."""
     return client.post(
         "/api/v1/users",
-        json={"email": email, "password": "secret", "full_name": full_name},
+        json={"email": email, "password": "secret12", "full_name": full_name},
     ).json()
 
 
@@ -19,6 +19,6 @@ def login_as(client, email: str) -> None:
     """Replace the client's access token with this user's token."""
     token = client.post(
         "/api/v1/auth/login",
-        json={"email": email, "password": "secret"},
+        json={"email": email, "password": "secret12"},
     ).json()["access_token"]
     client.headers["Authorization"] = f"Bearer {token}"

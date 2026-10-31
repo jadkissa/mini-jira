@@ -36,14 +36,14 @@ class LabelRepository:
     def create(self, label: Label) -> Label:
         """Insert a label and return it."""
         self.db.add(label)
-        self.db.commit()
+        self.db.flush()
         self.db.refresh(label)
         return label
 
     def delete(self, label: Label) -> None:
         """Delete a label. Task links are removed by the database cascade."""
         self.db.delete(label)
-        self.db.commit()
+        self.db.flush()
 
     def get_task_label(self, task_id: int, label_id: int) -> TaskLabel | None:
         """Return the link between this task and label, or None."""
@@ -66,11 +66,11 @@ class LabelRepository:
     def add_task_label(self, link: TaskLabel) -> TaskLabel:
         """Attach a label to a task."""
         self.db.add(link)
-        self.db.commit()
+        self.db.flush()
         self.db.refresh(link)
         return link
 
     def remove_task_label(self, link: TaskLabel) -> None:
         """Remove a label from a task."""
         self.db.delete(link)
-        self.db.commit()
+        self.db.flush()

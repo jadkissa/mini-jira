@@ -9,9 +9,9 @@ The learning plan lives in [ROADMAP.md](ROADMAP.md).
 
 - Projects and tasks. Tasks have a status (`todo`, `in_progress`, `done`), a priority, and an optional `duration_days`. `delivery_date` is computed from that duration.
 - Teams with owner, admin, and member roles. A project belongs to a team. Users only see data for teams they belong to.
-- Register and login. Passwords are stored as an argon2 hash. Login returns a JWT access token and a refresh token.
-- Users can only edit or delete their own account. A superuser can manage every user and acts as owner on every team. Deactivated users cannot log in.
-- New tasks store `reporter_id` from the logged-in user. `assignee_id` is optional.
+- Register and login. Passwords are at least 8 characters and stored as an argon2 hash. Login returns a JWT access token and a refresh token.
+- Users can only edit or delete their own account. Deleting a user who owns a team is rejected until that team is deleted. A superuser can manage every user and acts as owner on every team. Deactivated users cannot log in.
+- New tasks store `reporter_id` from the logged-in user. `assignee_id` is optional and must be a member of the project's team.
 - Comments on tasks, labels on projects, and an activity log for task changes.
 - List endpoints accept `?page=1&page_size=20`. Task lists also accept `status` and `sort`.
 - Health check and OpenAPI docs. A Postman collection is in `postman/mini-jira.postman_collection.json`.
@@ -224,7 +224,7 @@ pytest
 pytest --cov=app
 ```
 
-Create `mini_jira_test` once. Each test builds and drops its own tables there. The latest local coverage run was 47 tests and 94%.
+Create `mini_jira_test` once. Each test builds and drops its own tables there. The latest local coverage run was 51 tests and 94%.
 
 GitHub Actions lints the code, runs `pytest`, and builds the API image on every push and pull request. That job does not enforce the coverage number yet.
 

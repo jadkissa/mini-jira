@@ -24,6 +24,6 @@ class CommentRepository:
     def create(self, comment: Comment) -> Comment:
         """Insert a comment and return it."""
         self.db.add(comment)
-        self.db.commit()
+        self.db.flush()
         self.db.refresh(comment)
         return comment

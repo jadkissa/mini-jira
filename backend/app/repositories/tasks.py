@@ -35,17 +35,17 @@ class TaskRepository:
     def create(self, task: Task) -> Task:
         """Insert a task and return it with its database id."""
         self.db.add(task)
-        self.db.commit()
+        self.db.flush()
         self.db.refresh(task)
         return task
     
     def update(self, task: Task) -> Task:
         """Save changes already made on the task and return it."""
-        self.db.commit()
+        self.db.flush()
         self.db.refresh(task)
         return task
 
     def delete(self, task: Task) -> None:
         """Delete the task."""
         self.db.delete(task)
-        self.db.commit()
+        self.db.flush()
