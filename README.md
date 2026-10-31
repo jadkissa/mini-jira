@@ -38,8 +38,25 @@ Still planned: background jobs, Redis cache, rate limiting, and optional OAuth, 
 - **Repositories** hold every database query.
 - **Models** are SQLAlchemy tables. **Schemas** are Pydantic request and response bodies.
 
+```mermaid
+flowchart LR
+  Client --> Router
+  Router --> Service
+  Service --> Repository
+  Repository --> PostgreSQL
 ```
-Client -> Router -> Service -> Repository -> PostgreSQL
+
+A protected request is decided in this order:
+
+```mermaid
+flowchart TD
+  Request --> Token{Valid access token?}
+  Token -->|no| Denied401[401]
+  Token -->|yes| Member{Member of the team?}
+  Member -->|no| Hidden404[404]
+  Member -->|yes| Role{Role allows this action?}
+  Role -->|no| Forbidden403[403]
+  Role -->|yes| Action[Run the action]
 ```
 
 ```
@@ -71,6 +88,23 @@ mini-jira/
 ```
 
 ## Data model
+
+```mermaid
+erDiagram
+  User ||--o{ Team : owns
+  User ||--o{ TeamMember : joins
+  Team ||--|{ TeamMember : has
+  Team ||--o{ Project : contains
+  Project ||--o{ Task : contains
+  Project ||--o{ Label : defines
+  Task }o--o{ Label : tagged_with
+  User ||--o{ Task : reports
+  User ||--o{ Task : assigned
+  Task ||--o{ Comment : has
+  User ||--o{ Comment : writes
+  Task ||--o{ ActivityLog : records
+  User ||--o{ ActivityLog : acts
+```
 
 | Table | Main fields |
 |---|---|
