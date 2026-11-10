@@ -95,34 +95,96 @@ mini-jira/
 
 ```mermaid
 erDiagram
-  User ||--o{ Team : owns
-  User ||--o{ TeamMember : joins
-  Team ||--|{ TeamMember : has
-  Team ||--o{ Project : contains
-  Project ||--o{ Task : contains
-  Project ||--o{ Label : defines
-  Task }o--o{ Label : tagged_with
-  User ||--o{ Task : reports
-  User ||--o{ Task : assigned
-  Task ||--o{ Comment : has
-  User ||--o{ Comment : writes
-  Task ||--o{ ActivityLog : records
-  User ||--o{ ActivityLog : acts
+  users {
+    int id PK
+    string email UK "not null"
+    string hashed_password "not null"
+    string full_name
+    bool is_active "default true"
+    bool is_superuser "not null, default false"
+    timestamptz created_at
+  }
+  teams {
+    int id PK
+    string name "not null"
+    int owner_id FK "users.id, not null"
+    timestamptz created_at
+  }
+  team_members {
+    int team_id PK, FK "teams.id, cascade"
+    int user_id PK, FK "users.id, cascade"
+    string role "owner, admin, member"
+  }
+  projects {
+    int id PK
+    string name "not null"
+    string description
+    int team_id FK "teams.id, not null, cascade"
+    timestamptz created_at
+    timestamptz updated_at
+  }
+  tasks {
+    int id PK
+    string title "not null"
+    string description
+    string status "todo, in_progress, done"
+    string priority "low, medium, high"
+    int duration_days
+    date delivery_date "created_at + duration_days"
+    int project_id FK "projects.id, not null, cascade"
+    int reporter_id FK "users.id, set null"
+    int assignee_id FK "users.id, set null"
+    timestamptz created_at
+    timestamptz updated_at
+  }
+  comments {
+    int id PK
+    string body "not null"
+    int task_id FK "tasks.id, cascade"
+    int author_id FK "users.id, set null"
+    timestamptz created_at
+  }
+  labels {
+    int id PK
+    string name "unique per project"
+    string color
+    int project_id FK "projects.id, cascade"
+  }
+  task_labels {
+    int task_id PK, FK "tasks.id, cascade"
+    int label_id PK, FK "labels.id, cascade"
+  }
+  activity_log {
+    int id PK
+    string action "not null"
+    string old_value
+    string new_value
+    int task_id FK "tasks.id, cascade"
+    int actor_id FK "users.id, set null"
+    timestamptz created_at
+  }
+
+  users ||--o{ teams : owns
+  users ||--o{ team_members : joins
+  teams ||--|{ team_members : has
+  teams ||--o{ projects : contains
+  projects ||--o{ tasks : contains
+  projects ||--o{ labels : defines
+  tasks ||--o{ task_labels : tagged
+  labels ||--o{ task_labels : used_by
+  users |o--o{ tasks : reports
+  users |o--o{ tasks : assigned_to
+  tasks ||--o{ comments : has
+  users |o--o{ comments : writes
+  tasks ||--o{ activity_log : records
+  users |o--o{ activity_log : acts
 ```
 
-| Table | Main fields |
-|---|---|
-| users | id, email (unique), hashed_password, full_name, is_active, is_superuser, created_at |
-| teams | id, name, owner_id, created_at |
-| team_members | team_id, user_id, role (`owner`, `admin`, `member`) |
-| projects | id, name, description, team_id, created_at, updated_at |
-| tasks | id, project_id, title, description, status, priority, duration_days, delivery_date, reporter_id, assignee_id, created_at, updated_at |
-| comments | id, task_id, author_id, body, created_at |
-| labels | id, project_id, name, color |
-| task_labels | task_id, label_id |
-| activity_log | id, task_id, actor_id, action, old_value, new_value, created_at |
-
-`delivery_date` is the UTC date of `created_at` plus `duration_days`, when a duration is set. Deleting a project cascades to its tasks. Timestamps are timezone-aware UTC.
+- **Ownership chain:** a team owns its projects, and a project owns its tasks and labels. Deleting a parent deletes everything beneath it (`ON DELETE CASCADE`).
+- **Users on records:** reporter, assignee, comment author, and activity actor are optional links. Deleting the user empties the link and keeps the record (`SET NULL`), which is why those lines use `|o`.
+- **Team owner:** `teams.owner_id` has no delete rule, so the API returns 409 when deleting a user who owns a team.
+- **Join tables:** `team_members` and `task_labels` use a two-column primary key, so a user can't join a team twice and a label can't be added to a task twice.
+- `delivery_date` is the UTC date of `created_at` plus `duration_days`, when a duration is set. Timestamps are timezone-aware UTC.
 
 ## Roles
 
