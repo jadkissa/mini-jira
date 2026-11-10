@@ -86,7 +86,7 @@ Persistence moved earlier, so there was no long-lived in-memory store.
 - [x] Coverage report. Local run: 55 tests, 94% (target was 70%+). `pytest-cov` is in `requirements.txt`
 - [x] GitHub Actions: lint, test, and build the image on every push and pull request
 - [x] CI fails the job when coverage drops under 70% (`--cov-fail-under=70`)
-- [ ] README "Getting started" works from a clean clone
+- [x] README "Getting started" works from a clean clone
 
 After Phase 6 the project is solid enough to put on a CV. Later phases make it stand out.
 
