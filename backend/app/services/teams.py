@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from fastapi import HTTPException
 
 from app.models.team import Team, TeamMember
@@ -42,6 +44,11 @@ class TeamService:
         if not team:
             raise HTTPException(status_code=404, detail="Team not found")
         return team
+
+    def list_members(self, team_id: int, user_id: int) -> list[TeamMember]:
+        """Return the members of a team the user belongs to, or 404."""
+        require_membership(self.repo, team_id, user_id)
+        return self.repo.list_members(team_id)
 
     def delete(self, team_id: int, user_id: int) -> None:
         """Delete a team. Only the owner may do this."""

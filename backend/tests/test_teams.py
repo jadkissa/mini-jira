@@ -90,3 +90,34 @@ def test_outsider_gets_404(client):
     assert client.get(f"/api/v1/tasks/{task_id}").status_code == 404
     listed = client.get("/api/v1/projects").json()
     assert project_id not in [project["id"] for project in listed]
+
+
+def test_list_members_returns_names_and_emails(client):
+    """Members come back owner first, with each user's name and email."""
+    team_id, _, _ = _team_with_task(client)
+    owner = client.get("/api/v1/users/me").json()
+    bob = register(client, "bob@example.com", "Bob")
+    client.post(f"/api/v1/teams/{team_id}/members", json={"user_id": bob["id"]})
+
+    response = client.get(f"/api/v1/teams/{team_id}/members")
+
+    assert response.status_code == 200
+    assert response.json() == [
+        {
+            "user_id": owner["id"],
+            "role": "owner",
+            "user": {"id": owner["id"], "email": owner["email"], "full_name": owner["full_name"]},
+        },
+        {
+            "user_id": bob["id"],
+            "role": "member",
+            "user": {"id": bob["id"], "email": "bob@example.com", "full_name": "Bob"},
+        },
+    ]
+
+
+def test_outsider_cannot_list_members(client):
+    team_id, _, _ = _team_with_task(client)
+    register(client, "out@example.com", "Out")
+    login_as(client, "out@example.com")
+    assert client.get(f"/api/v1/teams/{team_id}/members").status_code == 404

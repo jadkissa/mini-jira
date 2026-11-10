@@ -72,6 +72,16 @@ def delete_team(
     _teams(db).delete(team_id, current_user.id)
 
 
+@router.get("/{team_id}/members", response_model=list[TeamMemberRead])
+def list_members(
+    team_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Return the team's members with their name and email."""
+    return _teams(db).list_members(team_id, current_user.id)
+
+
 @router.post("/{team_id}/members", response_model=TeamMemberRead, status_code=201)
 def add_member(
     team_id: int,

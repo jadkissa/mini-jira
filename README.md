@@ -16,7 +16,7 @@ The learning plan lives in [ROADMAP.md](ROADMAP.md).
 - List endpoints accept `?page=1&page_size=20`. Task lists also accept `status` and `sort`.
 - Health check and OpenAPI docs. A Postman collection is in `postman/mini-jira.postman_collection.json`.
 
-Still planned: background jobs, Redis cache, rate limiting, and optional OAuth, GraphQL, and WebSockets. See the roadmap.
+Still planned: a small frontend, background jobs, Redis cache, rate limiting, and optional OAuth, GraphQL, and WebSockets. See the roadmap.
 
 ## Tech stack
 
@@ -223,8 +223,8 @@ All app routes live under `/api/v1`. `GET /health` does not.
 |---|---|
 | Health | `GET /health` |
 | Auth | `POST /auth/login`, `POST /auth/refresh`, `GET /users/me` |
-| Users | `POST /users`, `GET /users/{id}`, `PATCH /users/{id}`, `DELETE /users/{id}` |
-| Teams | `POST /teams`, `GET /teams`, `GET /teams/{id}`, `DELETE /teams/{id}`, `POST /teams/{id}/members`, `DELETE /teams/{id}/members/{user_id}`, `POST /teams/{id}/projects` |
+| Users | `POST /users`, `GET /users?email=`, `GET /users/{id}`, `PATCH /users/{id}`, `DELETE /users/{id}` |
+| Teams | `POST /teams`, `GET /teams`, `GET /teams/{id}`, `DELETE /teams/{id}`, `GET /teams/{id}/members`, `POST /teams/{id}/members`, `DELETE /teams/{id}/members/{user_id}`, `POST /teams/{id}/projects` |
 | Projects | `GET /projects`, `GET /projects/{id}`, `PATCH /projects/{id}`, `DELETE /projects/{id}` |
 | Tasks | `POST /projects/{id}/tasks`, `GET /projects/{id}/tasks`, `GET /tasks/{id}`, `PATCH /tasks/{id}`, `DELETE /tasks/{id}` |
 | Comments | `POST /tasks/{id}/comments`, `GET /tasks/{id}/comments` |
@@ -234,6 +234,8 @@ All app routes live under `/api/v1`. `GET /health` does not.
 `POST /users`, `POST /auth/login`, and `POST /auth/refresh` are public. Every other route needs `Authorization: Bearer <access_token>`.
 
 Interactive docs: `/docs` and `/redoc`. Import `postman/mini-jira.postman_collection.json` to call the same routes from Postman. Run **Login** first. It stores the access token.
+
+Browsers may call the API only from the origins in `CORS_ORIGINS`. The default allows the Vite dev server on `http://localhost:5173`.
 
 ## Getting started
 
@@ -286,7 +288,7 @@ pytest
 pytest --cov=app
 ```
 
-Create `mini_jira_test` once. Each test builds and drops its own tables there. The latest local coverage run was 55 tests and 94%.
+Create `mini_jira_test` once. Each test builds and drops its own tables there. The latest local coverage run was 62 tests and 94%.
 
 GitHub Actions lints the code, runs `pytest`, and builds the API image on every push and pull request. The test job fails when coverage drops under 70%.
 

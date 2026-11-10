@@ -43,3 +43,4 @@ class TeamMember(Base):
     role = Column(String, nullable=False)
 
     team = relationship("Team", back_populates="members")
+    user = relationship("User")

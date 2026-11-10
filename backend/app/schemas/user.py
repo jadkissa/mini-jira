@@ -24,6 +24,13 @@ class UserRead(BaseModel):
     is_superuser: bool
     created_at: datetime 
 
+class UserSummary(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    email: str
+    full_name: str
+
+
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8)

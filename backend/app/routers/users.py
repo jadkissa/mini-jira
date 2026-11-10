@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
+from pydantic import EmailStr
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user
@@ -18,6 +19,16 @@ def _service(db: Session) -> AuthService:
 def register_user(payload: UserCreate, db: Session = Depends(get_db)):
     """Create a user. This route stays public."""
     return _service(db).register(payload)
+
+
+@router.get("/users", response_model=list[UserRead])
+def find_users(
+    email: EmailStr = Query(),
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    """Find a user by exact email, for example before inviting them to a team."""
+    return _service(db).find_by_email(email)
 
 
 @router.get("/users/me", response_model=UserRead)

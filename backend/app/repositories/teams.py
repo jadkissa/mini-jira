@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.models.team import Team, TeamMember
 from app.models.user import User
@@ -59,6 +59,16 @@ class TeamRepository:
             self.db.query(TeamMember)
             .filter(TeamMember.team_id == team_id, TeamMember.user_id == user_id)
             .first()
+        )
+
+    def list_members(self, team_id: int) -> list[TeamMember]:
+        """Return every membership on the team with its user loaded, owner first."""
+        return (
+            self.db.query(TeamMember)
+            .options(joinedload(TeamMember.user))
+            .filter(TeamMember.team_id == team_id)
+            .order_by(TeamMember.role != "owner", TeamMember.user_id)
+            .all()
         )
 
     def team_ids_for_user(self, user_id: int) -> list[int]:

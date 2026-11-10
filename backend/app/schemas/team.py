@@ -3,6 +3,8 @@ from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.schemas.user import UserSummary
+
 
 class InviteRole(str, Enum):
     admin = "admin"
@@ -30,6 +32,7 @@ class TeamMemberRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     user_id: int
     role: str
+    user: UserSummary
 
 
 class TeamDetail(TeamRead):

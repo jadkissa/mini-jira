@@ -36,6 +36,24 @@ def test_user_cannot_grant_themselves_superuser(client):
     assert response.status_code == 403
 
 
+def test_find_user_by_email(client):
+    other = register(client, "other@example.com", "Other")
+    response = client.get("/api/v1/users", params={"email": "other@example.com"})
+    assert response.status_code == 200
+    assert [u["id"] for u in response.json()] == [other["id"]]
+
+
+def test_find_user_by_unknown_email_returns_empty_list(client):
+    response = client.get("/api/v1/users", params={"email": "nobody@example.com"})
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+def test_find_user_needs_a_valid_email(client):
+    assert client.get("/api/v1/users").status_code == 422
+    assert client.get("/api/v1/users", params={"email": "nope"}).status_code == 422
+
+
 def test_cannot_delete_user_who_owns_a_team(client):
     me = client.get("/api/v1/users/me").json()
     assert client.post("/api/v1/teams", json={"name": "Mine"}).status_code == 201

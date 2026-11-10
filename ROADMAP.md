@@ -83,12 +83,21 @@ Persistence moved earlier, so there was no long-lived in-memory store.
 *Learn: containerizing an app, automated pipelines, coverage.*
 
 - [x] Dockerfile for the API, Docker Compose (API + DB)
-- [x] Coverage report. Local run: 55 tests, 94% (target was 70%+). `pytest-cov` is in `requirements.txt`
+- [x] Coverage report. Local run: 62 tests, 94% (target was 70%+). `pytest-cov` is in `requirements.txt`
 - [x] GitHub Actions: lint, test, and build the image on every push and pull request
 - [x] CI fails the job when coverage drops under 70% (`--cov-fail-under=70`)
 - [x] README "Getting started" works from a clean clone
 
 After Phase 6 the project is solid enough to put on a CV. Later phases make it stand out.
+
+## Phase 6.5: Small frontend
+
+*Learn: how a real client uses the API, CORS, token refresh. Time-boxed to about a week.*
+
+- [x] Backend gaps for a client: CORS settings, `GET /users?email=` to find someone to invite, `GET /teams/{id}/members` with names and emails
+- [ ] React + Vite app in `frontend/`
+- [ ] Screens: login, teams, projects, task board with status columns
+- [ ] Refresh the access token when it expires
 
 ## Phase 7: Background jobs
 

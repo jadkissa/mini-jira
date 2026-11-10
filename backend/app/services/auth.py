@@ -56,6 +56,11 @@ class AuthService:
             raise HTTPException(status_code=401, detail="Invalid token")
         return AccessToken(access_token=create_access_token(user.id))
 
+    def find_by_email(self, email: str) -> list[User]:
+        """Return the user with this email as a list of zero or one."""
+        user = self.repo.get_by_email(email)
+        return [user] if user else []
+
     def get(self, user_id: int) -> User:
         user = self.repo.get_by_id(user_id)
         if not user:

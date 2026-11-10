@@ -31,6 +31,8 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 15
     refresh_token_expire_days: int = 7
+    # Browser origins allowed to call the API. In .env, write a JSON list.
+    cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
     @model_validator(mode="after")
     def require_real_secret_outside_development(self) -> "Settings":
