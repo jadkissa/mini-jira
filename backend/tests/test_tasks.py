@@ -70,6 +70,17 @@ def test_create_task_rejects_missing_assignee(client):
     assert response.status_code == 422
 
 
+def test_update_task_bumps_updated_at(client):
+    project_id = create_project(client, "Demo").json()["id"]
+    created = client.post(f"/api/v1/projects/{project_id}/tasks", json={"title": "A"}).json()
+
+    updated = client.patch(f"/api/v1/tasks/{created['id']}", json={"title": "B"}).json()
+
+    assert datetime.fromisoformat(updated["updated_at"]) > datetime.fromisoformat(
+        created["updated_at"]
+    )
+
+
 def test_task_rejects_null_required_fields_and_bad_values(client):
     project_id = create_project(client, "Demo").json()["id"]
     task_id = client.post(f"/api/v1/projects/{project_id}/tasks", json={"title": "A"}).json()["id"]

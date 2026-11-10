@@ -45,7 +45,7 @@ jobs:
 
       - name: Test
         working-directory: backend
-        run: pytest -q
+        run: pytest -q --cov=app --cov-fail-under=70
 
   build:
     runs-on: ubuntu-latest

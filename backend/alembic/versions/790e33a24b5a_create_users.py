@@ -1,7 +1,7 @@
 """create users
 
 Revision ID: 790e33a24b5a
-Revises: 690488afd229
+Revises: b1277363c6dd
 Create Date: 2026-10-25 18:52:06.939200
 
 """
@@ -13,7 +13,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = '790e33a24b5a'
-down_revision: str | Sequence[str] | None = '690488afd229'
+down_revision: str | Sequence[str] | None = 'b1277363c6dd'
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

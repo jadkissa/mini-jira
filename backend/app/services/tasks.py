@@ -10,7 +10,7 @@ from app.repositories.projects import ProjectRepository
 from app.repositories.tasks import TaskRepository
 from app.repositories.teams import TeamRepository
 from app.schemas.task import TaskCreate, TaskStatus, TaskUpdate
-from app.services.access import MEMBER, require_membership
+from app.services.access import MEMBER, visible_project, visible_task
 
 _SORT_FIELDS = {"id", "delivery_date", "priority", "status", "created_at"}
 
@@ -61,32 +61,14 @@ class TaskService:
         self.activity_repo = activity_repo
 
     def _visible_project(self, project_id: int, user_id: int):
-        """Return a project the user belongs to, or 404."""
-        project = self.project_repo.get_by_id(project_id)
-        if not project:
-            raise HTTPException(status_code=404, detail="Project not found")
-        membership = require_membership(
-            self.team_repo,
-            project.team_id,
-            user_id,
-            detail="Project not found",
-        )
-        return project, membership
+        return visible_project(self.project_repo, self.team_repo, project_id, user_id)
 
     def _visible_task(self, task_id: int, user_id: int):
-        """Return a task the user can see, or 404."""
-        task = self.repo.get_by_id(task_id)
-        if not task:
-            raise HTTPException(status_code=404, detail="Task not found")
-        try:
-            _, membership = self._visible_project(task.project_id, user_id)
-        except HTTPException:
-            raise HTTPException(status_code=404, detail="Task not found")
-        return task, membership
+        return visible_task(self.repo, self.project_repo, self.team_repo, task_id, user_id)
 
-    def _require_team_assignee(self, team_id: int | None, assignee_id: int) -> None:
+    def _require_team_assignee(self, team_id: int, assignee_id: int) -> None:
         """The assignee must belong to the project's team."""
-        if team_id is not None and self.team_repo.get_membership(team_id, assignee_id):
+        if self.team_repo.get_membership(team_id, assignee_id):
             return
         if self.team_repo.is_superuser(assignee_id):
             return
@@ -132,11 +114,10 @@ class TaskService:
 
     def update(self, task_id: int, payload: TaskUpdate, user_id: int) -> Task:
         """Apply the sent fields. Any team member may edit a task."""
-        task, _ = self._visible_task(task_id, user_id)
+        task, membership = self._visible_task(task_id, user_id)
         data = payload.model_dump(exclude_unset=True)
         if data.get("assignee_id") is not None:
-            project = self.project_repo.get_by_id(task.project_id)
-            self._require_team_assignee(project.team_id if project else None, data["assignee_id"])
+            self._require_team_assignee(membership.team_id, data["assignee_id"])
         changes: list[tuple[str, str | None, str | None]] = []
         for key, value in data.items():
             old = _as_text(getattr(task, key))
@@ -146,7 +127,6 @@ class TaskService:
             setattr(task, key, value)
         if "duration_days" in data:
             task.delivery_date = _delivery_date_for(task.duration_days, task.created_at)
-        task.updated_at = datetime.now(UTC)
         task = self.repo.update(task)
         for key, old, new in changes:
             self._log(task.id, user_id, key, old, new)

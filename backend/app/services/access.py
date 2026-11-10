@@ -15,7 +15,7 @@ MANAGERS = {OWNER, ADMIN}
 
 def require_membership(
     repo: TeamRepository,
-    team_id: int | None,
+    team_id: int,
     user_id: int,
     detail: str = "Team not found",
 ) -> TeamMember:
@@ -23,8 +23,6 @@ def require_membership(
 
     A superuser gets an unsaved owner membership on every existing team.
     """
-    if team_id is None:
-        raise HTTPException(status_code=404, detail=detail)
     if repo.is_superuser(user_id):
         if not repo.get_by_id(team_id):
             raise HTTPException(status_code=404, detail=detail)

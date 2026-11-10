@@ -22,7 +22,7 @@ class Project(Base):
     team_id = Column(
         Integer,
         ForeignKey("teams.id", ondelete="CASCADE"),
-        nullable=True,
+        nullable=False,
         index=True,
     )
     team = relationship("Team", back_populates="projects")

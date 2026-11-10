@@ -1,12 +1,8 @@
-from datetime import UTC, datetime
-
-from fastapi import HTTPException
-
 from app.models.project import Project
 from app.repositories.projects import ProjectRepository
 from app.repositories.teams import TeamRepository
 from app.schemas.project import ProjectCreate, ProjectUpdate
-from app.services.access import require_manager, require_membership
+from app.services.access import require_manager, require_membership, visible_project
 
 
 class ProjectService:
@@ -40,7 +36,6 @@ class ProjectService:
         require_manager(membership)
         for key, value in payload.model_dump(exclude_unset=True).items():
             setattr(project, key, value)
-        project.updated_at = datetime.now(UTC)
         return self.repo.update(project)
 
     def delete(self, project_id: int, user_id: int) -> None:
@@ -50,13 +45,4 @@ class ProjectService:
         self.repo.delete(project)
 
     def _visible(self, project_id: int, user_id: int):
-        project = self.repo.get_by_id(project_id)
-        if not project:
-            raise HTTPException(status_code=404, detail="Project not found")
-        membership = require_membership(
-            self.team_repo,
-            project.team_id,
-            user_id,
-            detail="Project not found",
-        )
-        return project, membership
+        return visible_project(self.repo, self.team_repo, project_id, user_id)

@@ -10,7 +10,7 @@ class ProjectRead(BaseModel):
     description: str | None = None
     created_at: datetime
     updated_at: datetime
-    team_id: int | None = None
+    team_id: int
 
 class ProjectCreate(BaseModel):
     name: str = Field(min_length=1)

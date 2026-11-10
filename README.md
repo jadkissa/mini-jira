@@ -224,9 +224,11 @@ pytest
 pytest --cov=app
 ```
 
-Create `mini_jira_test` once. Each test builds and drops its own tables there. The latest local coverage run was 51 tests and 94%.
+Create `mini_jira_test` once. Each test builds and drops its own tables there. The latest local coverage run was 55 tests and 94%.
 
-GitHub Actions lints the code, runs `pytest`, and builds the API image on every push and pull request. That job does not enforce the coverage number yet.
+GitHub Actions lints the code, runs `pytest`, and builds the API image on every push and pull request. The test job fails when coverage drops under 70%.
+
+Outside `ENVIRONMENT=development`, the API refuses to start unless `JWT_SECRET` is changed from the default.
 
 ## Development
 
