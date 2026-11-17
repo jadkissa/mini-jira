@@ -16,7 +16,9 @@ The learning plan lives in [ROADMAP.md](ROADMAP.md).
 - List endpoints accept `?page=1&page_size=20`. Task lists also accept `status` and `sort`.
 - Health check and OpenAPI docs. A Postman collection is in `postman/mini-jira.postman_collection.json`.
 
-Still planned: a small frontend, background jobs, Redis cache, rate limiting, and optional OAuth, GraphQL, and WebSockets. See the roadmap.
+- A React frontend in `frontend/` with login and a teams page. More screens are in progress.
+
+Still planned: the rest of the frontend screens, background jobs, Redis cache, rate limiting, and optional OAuth, GraphQL, and WebSockets. See the roadmap.
 
 ## Tech stack
 
@@ -28,7 +30,8 @@ Still planned: a small frontend, background jobs, Redis cache, rate limiting, an
 | Database | PostgreSQL, SQLAlchemy 2.0, Alembic |
 | Auth | JWT, argon2 |
 | Tests | pytest, pytest-cov |
-| Lint | Ruff |
+| Frontend | React, TypeScript, Vite, React Router |
+| Lint | Ruff, oxlint |
 | Containers | Docker, Docker Compose |
 | CI | GitHub Actions |
 
@@ -81,6 +84,13 @@ mini-jira/
 │   ├── Dockerfile
 │   ├── requirements.txt
 │   ├── ruff.toml
+│   └── .env.example
+├── frontend/
+│   ├── src/
+│   │   ├── api/
+│   │   ├── auth/
+│   │   └── pages/
+│   ├── package.json
 │   └── .env.example
 ├── .github/workflows/ci.yml
 ├── docker-compose.yml
@@ -276,7 +286,19 @@ uvicorn app.main:app --reload
 
 Open the docs at http://127.0.0.1:8000/docs and the health check at http://127.0.0.1:8000/health.
 
-`docker compose up --build` runs the API in Docker as well. Compose points `DATABASE_URL` at the `db` service.
+`docker compose up --build` runs Postgres, the API, and the frontend. Compose points `DATABASE_URL` at the `db` service, and the frontend is served at http://localhost:5173. The API address is baked into the frontend image, so change `VITE_API_URL` and rebuild when it is not `http://localhost:8000`.
+
+**6. Run the frontend**
+
+In a second terminal, with the API running:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open http://localhost:5173 and log in with a user you registered through `POST /api/v1/users`. More details are in [frontend/README.md](frontend/README.md).
 
 ## Testing
 
@@ -290,7 +312,7 @@ pytest --cov=app
 
 Create `mini_jira_test` once. Each test builds and drops its own tables there. The latest local coverage run was 62 tests and 94%.
 
-GitHub Actions lints the code, runs `pytest`, and builds the API image on every push and pull request. The test job fails when coverage drops under 70%.
+GitHub Actions lints the code, runs `pytest`, lints and builds the frontend, and builds the API and frontend images on every push and pull request. The test job fails when coverage drops under 70%.
 
 Outside `ENVIRONMENT=development`, the API refuses to start unless `JWT_SECRET` is changed from the default.
 

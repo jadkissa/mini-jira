@@ -95,9 +95,12 @@ After Phase 6 the project is solid enough to put on a CV. Later phases make it s
 *Learn: how a real client uses the API, CORS, token refresh. Time-boxed to about a week.*
 
 - [x] Backend gaps for a client: CORS settings, `GET /users?email=` to find someone to invite, `GET /teams/{id}/members` with names and emails
-- [ ] React + Vite app in `frontend/`
-- [ ] Screens: login, teams, projects, task board with status columns
-- [ ] Refresh the access token when it expires
+- [x] React + Vite app in `frontend/`, linted and built in CI
+- [x] API client that sends the access token and refreshes it when it expires
+- [x] Login screen and a protected teams list
+- [x] Sign up
+- [x] Create, edit, and delete teams, projects, and tasks
+- [x] Members, comments, labels, and the task activity list
 
 ## Phase 7: Background jobs
 
